@@ -6,17 +6,25 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "course-agent": "ts-node-dev --respawn --transpile-only src/course_agent/course-builder-agent.ts",
+    "test-agent": "ts-node-dev --respawn --transpile-only src/course_agent/test-agent.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "@langchain/openai": "^0.0.34",
+    "@langchain/core": "^0.1.62",
+    "langgraph": "^0.0.34",
+    "zod": "^3.22.4",
+    "readline-sync": "^1.4.10"
   },
   "devDependencies": {
     "@types/cors": "^2.8.14",
     "@types/express": "^4.17.17",
     "@types/node": "^20.5.9",
+    "@types/readline-sync": "^1.4.8",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.2.2"
   }
