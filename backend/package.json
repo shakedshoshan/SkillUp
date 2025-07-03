@@ -8,24 +8,31 @@
     "dev": "ts-node-dev --respawn --transpile-only index.ts",
     "build": "tsc",
     "course-agent": "ts-node-dev --respawn --transpile-only src/course_agent/course-builder-agent.ts",
-    "test-agent": "ts-node-dev --respawn --transpile-only src/course_agent/test-agent.ts"
+    "test-agent": "ts-node-dev --respawn --transpile-only src/course_agent/test-agent.ts",
+    "migrate": "ts-node src/migrations/migrate.ts",
+    "migrate:up": "ts-node src/migrations/migrate.ts up",
+    "migrate:status": "ts-node src/migrations/migrate.ts status"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.23",
+    "@langchain/langgraph": "^0.3.6",
+    "@langchain/openai": "^0.3.14",
+    "@supabase/supabase-js": "^2.50.3",
+    "@types/pg": "^8.15.4",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "@langchain/langgraph": "^0.3.6",
-    "@langchain/openai": "^0.3.14",
-    "@langchain/core": "^0.3.23",
-    "zod": "^3.22.4",
-    "readline-sync": "^1.4.10"
+    "pg": "^8.16.3",
+    "readline-sync": "^1.4.10",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.14",
     "@types/express": "^4.17.17",
     "@types/node": "^20.5.9",
     "@types/readline-sync": "^1.4.8",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.2.2"
   }
-} 
+}
