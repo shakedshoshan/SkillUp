@@ -1,6 +1,4 @@
-import { StateGraph, END } from "langgraph";
 import { ChatOpenAI } from "@langchain/openai";
-import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { WorkflowState, CourseStructure, CoursePart, CourseLesson, LessonContent } from './models';
 import { CoursePrompts } from './prompts';
@@ -15,14 +13,17 @@ import {
 } from './models';
 
 export class CourseBuilderWorkflow {
-  private openai: OpenAI;
+  private llm: ChatOpenAI;
   private knowledgeService: KnowledgeService;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    console.log("🔨 Initializing Course Builder Workflow...");
+    this.llm = new ChatOpenAI({
+      modelName: "gpt-4o-mini",
+      temperature: 0.7,
     });
     this.knowledgeService = new KnowledgeService();
+    console.log("✅ LangChain Workflow Ready!");
   }
 
   /**
@@ -32,44 +33,30 @@ export class CourseBuilderWorkflow {
     console.log(`\n🚀 Starting Course Builder for: '${userQuery}'`);
     console.log('='.repeat(60));
 
-    try {
-      // Initialize state
-      let state: WorkflowState = {
-        user_query: userQuery,
-        course_subject: '',
-        course_structure: undefined,
-        current_part_index: 0,
-        current_lesson_index: 0,
-        status_message: ''
-      };
+    const initialState: WorkflowState = {
+      user_query: userQuery,
+      course_subject: '',
+      course_structure: undefined,
+      current_part_index: 0,
+      current_lesson_index: 0,
+      status_message: ''
+    };
 
+    try {
       // Step 1: Extract Course Structure
       console.log(CourseFormatter.formatProgress(1, 3, 'Extracting Course Structure'));
-      state = await this.extractCourseStructure(state);
+      let state = await this._extractCourseStructure(initialState);
 
       // Step 2: Build Lessons
       console.log(CourseFormatter.formatProgress(2, 3, 'Building Lessons'));
-      state = await this.buildLessons(state);
+      const updatedState1 = await this._buildLessons({ ...initialState, ...state });
 
       // Step 3: Generate Content
       console.log(CourseFormatter.formatProgress(3, 3, 'Generating Content'));
-      state = await this.generateLessonContent(state);
-
-      // Step 4: Save Course to JSON
-      if (state.course_structure) {
-        console.log('\n💾 Saving course to JSON file...');
-        try {
-          const savedPath = await CourseSaver.saveCourse(state.course_structure);
-          state.status_message += ` | Saved to: ${savedPath}`;
-        } catch (error) {
-          console.error('⚠️  Warning: Failed to save course to file:', error);
-          state.status_message += ' | Warning: Save failed';
-        }
-      }
+      const finalState = await this._generateLessonContent({ ...initialState, ...state, ...updatedState1 });
 
       console.log('\n✅ Course Building Complete!');
-      return state;
-
+      return { ...initialState, ...state, ...updatedState1, ...finalState };
     } catch (error) {
       console.error('\n❌ Error in workflow:', error);
       throw error;
@@ -79,7 +66,7 @@ export class CourseBuilderWorkflow {
   /**
    * Step 1: Extract main course parts and structure
    */
-  private async extractCourseStructure(state: WorkflowState): Promise<WorkflowState> {
+  private async _extractCourseStructure(state: WorkflowState): Promise<Partial<WorkflowState>> {
     console.log('\n📋 STEP 1: Extracting Course Structure...');
     console.log(`   Analyzing subject: ${state.user_query}`);
 
@@ -88,34 +75,19 @@ export class CourseBuilderWorkflow {
       const knowledge = await this.knowledgeService.gatherSubjectKnowledge(state.user_query);
       console.log(`   ✓ Gathered knowledge from ${knowledge.split('\n').length} sources`);
 
-      // Create messages for OpenAI
-      const messages: OpenAI.Chat.Completions.CreateChatCompletionRequestMessage[] = [
-        {
-          role: 'system',
-          content: CoursePrompts.STRUCTURE_SYSTEM
-        },
-        {
-          role: 'user',
-          content: CoursePrompts.structureUser(state.user_query, knowledge)
-        }
-      ];
+      // Create structured LLM with CourseStructure schema
+      const structuredLLM = this.llm.withStructuredOutput(CourseStructureSchema);
 
-      // Call OpenAI API
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages,
-        temperature: 0.7,
-        response_format: { type: 'json_object' }
-      });
+      // Create prompt template
+      const prompt = ChatPromptTemplate.fromMessages([
+        ["system", CoursePrompts.STRUCTURE_SYSTEM],
+        ["human", CoursePrompts.structureUser(state.user_query, knowledge)]
+      ]);
 
-      const responseContent = response.choices[0]?.message?.content;
-      if (!responseContent) {
-        throw new Error('No response from OpenAI API');
-      }
-
-      // Parse and validate response
-      const parsedResponse = JSON.parse(responseContent);
-      const courseStructure = CourseStructureSchema.parse(parsedResponse);
+      // Invoke the structured LLM
+      const courseStructure = await structuredLLM.invoke(
+        await prompt.formatMessages({})
+      );
 
       console.log(`   ✓ Generated course: '${courseStructure.title}'`);
       console.log(`   ✓ Created ${courseStructure.parts.length} main parts`);
@@ -125,7 +97,6 @@ export class CourseBuilderWorkflow {
       });
 
       return {
-        ...state,
         course_subject: state.user_query,
         course_structure: courseStructure,
         status_message: `Extracted ${courseStructure.parts.length} course parts`
@@ -140,7 +111,7 @@ export class CourseBuilderWorkflow {
   /**
    * Step 2: Build lessons for each course part
    */
-  private async buildLessons(state: WorkflowState): Promise<WorkflowState> {
+  private async _buildLessons(state: WorkflowState): Promise<Partial<WorkflowState>> {
     console.log('\n📚 STEP 2: Building Lessons for Each Part...');
 
     if (!state.course_structure) {
@@ -154,46 +125,31 @@ export class CourseBuilderWorkflow {
         const part = state.course_structure.parts[partIdx];
         console.log(`\n   Processing Part ${partIdx + 1}: ${part.title}`);
 
-        // Create messages for OpenAI
-        const messages: OpenAI.Chat.Completions.CreateChatCompletionRequestMessage[] = [
-          {
-            role: 'system',
-            content: CoursePrompts.LESSONS_SYSTEM
-          },
-          {
-            role: 'user',
-            content: CoursePrompts.lessonsUser(part.title, part.description, part.learning_goals)
-          }
-        ];
+        // Create structured LLM for lessons array
+        const structuredLLM = this.llm.withStructuredOutput(
+          LessonContentSchema.array()
+        );
 
-        // Call OpenAI API
-        const response = await this.openai.chat.completions.create({
-          model: 'gpt-3.5-turbo',
-          messages,
-          temperature: 0.7,
-          response_format: { type: 'json_object' }
-        });
+        // Create prompt template
+        const prompt = ChatPromptTemplate.fromMessages([
+          ["system", CoursePrompts.LESSONS_SYSTEM],
+          ["human", CoursePrompts.lessonsUser(part.title, part.description, part.learning_goals)]
+        ]);
 
-        const responseContent = response.choices[0]?.message?.content;
-        if (!responseContent) {
-          throw new Error('No response from OpenAI API');
-        }
+        // Invoke the structured LLM
+        const lessonsData = await structuredLLM.invoke(
+          await prompt.formatMessages({})
+        );
 
-        // Parse and validate response
-        const parsedResponse = JSON.parse(responseContent);
-        
-                 // Handle both array and object responses
-         let lessons: CourseLesson[];
-         if (Array.isArray(parsedResponse)) {
-           lessons = parsedResponse.map((lesson: any) => CourseLessonSchema.parse(lesson));
-         } else if (parsedResponse.lessons && Array.isArray(parsedResponse.lessons)) {
-           lessons = parsedResponse.lessons.map((lesson: any) => CourseLessonSchema.parse(lesson));
-         } else {
-           throw new Error('Invalid lessons response format');
-         }
+        // Convert to CourseLesson format and limit to 5
+        const lessons: CourseLesson[] = lessonsData.slice(0, 5).map((lessonData, idx) => ({
+          lesson_number: idx + 1,
+          title: lessonData.title,
+          description: `Lesson covering ${lessonData.title}`,
+          content: undefined
+        }));
 
-        // Limit to max 5 lessons per part
-        part.lessons = lessons.slice(0, 3);
+        part.lessons = lessons;
 
         console.log(`   ✓ Generated ${part.lessons.length} lessons:`);
         part.lessons.forEach(lesson => {
@@ -213,7 +169,6 @@ export class CourseBuilderWorkflow {
       console.log(`\n   ✅ Total lessons created: ${totalLessons}`);
 
       return {
-        ...state,
         course_structure: updatedCourseStructure,
         status_message: `Built ${totalLessons} lessons across ${updatedParts.length} parts`
       };
@@ -227,7 +182,7 @@ export class CourseBuilderWorkflow {
   /**
    * Step 3: Generate detailed content for each lesson
    */
-  private async generateLessonContent(state: WorkflowState): Promise<WorkflowState> {
+  private async _generateLessonContent(state: WorkflowState): Promise<Partial<WorkflowState>> {
     console.log('\n📝 STEP 3: Generating Detailed Lesson Content...');
 
     if (!state.course_structure) {
@@ -248,39 +203,24 @@ export class CourseBuilderWorkflow {
           const lesson = part.lessons[lessonIdx];
           console.log(`      Processing Lesson ${lessonIdx + 1}: ${lesson.title}`);
 
-          // Create messages for OpenAI
-          const messages: OpenAI.Chat.Completions.CreateChatCompletionRequestMessage[] = [
-            {
-              role: 'system',
-              content: CoursePrompts.CONTENT_SYSTEM
-            },
-            {
-              role: 'user',
-              content: CoursePrompts.contentUser(
-                state.course_subject,
-                part.title,
-                lesson.title,
-                lesson.description
-              )
-            }
-          ];
+          // Create structured LLM for lesson content
+          const structuredLLM = this.llm.withStructuredOutput(LessonContentSchema);
 
-          // Call OpenAI API
-          const response = await this.openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages,
-            temperature: 0.7,
-            response_format: { type: 'json_object' }
-          });
+          // Create prompt template
+          const prompt = ChatPromptTemplate.fromMessages([
+            ["system", CoursePrompts.CONTENT_SYSTEM],
+            ["human", CoursePrompts.contentUser(
+              state.course_subject,
+              part.title,
+              lesson.title,
+              lesson.description
+            )]
+          ]);
 
-          const responseContent = response.choices[0]?.message?.content;
-          if (!responseContent) {
-            throw new Error('No response from OpenAI API');
-          }
-
-          // Parse and validate response
-          const parsedResponse = JSON.parse(responseContent);
-          const lessonContent = LessonContentSchema.parse(parsedResponse);
+          // Invoke the structured LLM
+          const lessonContent = await structuredLLM.invoke(
+            await prompt.formatMessages({})
+          );
 
           // Update lesson with content
           const updatedLesson = {
@@ -311,11 +251,23 @@ export class CourseBuilderWorkflow {
 
       console.log(`\n   ✅ Generated detailed content for ${totalLessonsProcessed} lessons`);
 
-      return {
-        ...state,
-        course_structure: updatedCourseStructure,
-        status_message: `Course complete with ${totalLessonsProcessed} fully detailed lessons`
-      };
+      // Save Course to JSON automatically
+      console.log('\n💾 Saving course to JSON file...');
+      try {
+        const savedPath = await CourseSaver.saveCourse(updatedCourseStructure);
+        const statusMessage = `Course complete with ${totalLessonsProcessed} fully detailed lessons | Saved to: ${savedPath}`;
+        
+        return {
+          course_structure: updatedCourseStructure,
+          status_message: statusMessage
+        };
+      } catch (saveError) {
+        console.error('⚠️  Warning: Failed to save course to file:', saveError);
+        return {
+          course_structure: updatedCourseStructure,
+          status_message: `Course complete with ${totalLessonsProcessed} fully detailed lessons | Warning: Save failed`
+        };
+      }
 
     } catch (error) {
       console.error('   ❌ Error generating lesson content:', error);

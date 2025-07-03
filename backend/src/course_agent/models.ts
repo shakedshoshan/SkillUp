@@ -35,7 +35,7 @@ export const CourseStructureSchema = z.object({
   target_audience: z.string(),
   prerequisites: z.array(z.string()),
   total_duration: z.string(),
-  parts: z.array(CoursePartSchema).default([]),
+  parts: z.array(CoursePartSchema).default([]).transform(parts => parts || []),
 });
 
 // Workflow State Schema
