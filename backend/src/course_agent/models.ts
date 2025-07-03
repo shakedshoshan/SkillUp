@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'; // zod is a library for validating and parsing data
 
 // Lesson Content Schema
 export const LessonContentSchema = z.object({
@@ -46,6 +46,7 @@ export const WorkflowStateSchema = z.object({
   current_part_index: z.number().default(0),
   current_lesson_index: z.number().default(0),
   status_message: z.string().default(''),
+  web_search_enabled: z.boolean().optional(),
 });
 
 // TypeScript Types (inferred from schemas)

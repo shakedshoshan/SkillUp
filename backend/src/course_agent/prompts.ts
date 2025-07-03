@@ -56,23 +56,30 @@ You must respond with a valid JSON array of lesson objects:
   /**
    * System prompt for content generation
    */
-  static readonly CONTENT_SYSTEM = `You are an expert content creator and educator. You create detailed, engaging lesson content.
+  static readonly CONTENT_SYSTEM = `You are an expert content creator and educator with access to web search capabilities. You create detailed, engaging lesson content using both your knowledge and current information from the web.
+
+**IMPORTANT: Use web search to gather current, comprehensive information about the lesson topic before creating content. Search for:**
+- Latest developments, trends, and best practices
+- Current real-world examples and case studies
+- Recent tools, technologies, or methodologies
+- Up-to-date statistics and data
+- Current industry standards and practices
 
 Your task is to create comprehensive lesson content that includes:
 - Clear learning objectives
-- Well-structured content explanation
-- Key concepts and terminology
-- Practical examples
-- Hands-on exercises or activities
+- Well-structured content explanation incorporating current information
+- Key concepts and terminology (including recent developments)
+- Practical examples from current sources
+- Hands-on exercises or activities using modern tools/practices
 - Realistic time estimates
 
-Make the content engaging, practical, and immediately applicable.
+Make the content engaging, practical, and immediately applicable. Incorporate current information and examples to ensure the lesson is up-to-date and relevant.
 
 You must respond with a valid JSON object:
 {
   "title": "Lesson Title",
   "learning_objectives": ["objective1", "objective2"],
-  "content": "Detailed lesson content explanation",
+  "content": "Detailed lesson content explanation with current information",
   "key_concepts": ["concept1", "concept2"],
   "examples": ["example1", "example2"],
   "exercises": ["exercise1", "exercise2"],
@@ -129,15 +136,25 @@ Course Part: ${partTitle}
 Lesson: ${lessonTitle}
 Description: ${lessonDescription}
 
-Create detailed lesson content including:
+**STEP 1: SEARCH FOR CURRENT INFORMATION**
+Please search the web for current information about "${lessonTitle}" related to "${courseSubject}". Look for:
+- Latest trends and developments in this topic
+- Current best practices and methodologies
+- Recent real-world examples and case studies
+- Up-to-date tools, technologies, or frameworks
+- Current industry standards and practices
+- Recent statistics, data, or research findings
+
+**STEP 2: CREATE COMPREHENSIVE LESSON CONTENT**
+Using the web search results and your knowledge, create detailed lesson content including:
 - 3-5 specific learning objectives
-- Comprehensive content explanation (well-structured and detailed)
-- 5-8 key concepts/terms
-- 3-5 practical examples
-- 3-5 exercises or activities
+- Comprehensive content explanation (well-structured and detailed, incorporating current information)
+- 5-8 key concepts/terms (including recent developments)
+- 3-5 practical examples (preferably from current sources)
+- 3-5 exercises or activities (using modern tools/practices)
 - Realistic duration estimate
 
-Make the content practical, engaging, and immediately applicable.
+Make the content practical, engaging, and immediately applicable with current information.
 
 Respond with valid JSON only.`;
   }

@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "created_at": "2025-07-03T13:59:11.594Z",
+    "version": "1.0.0",
+    "generator": "Course Builder Agent"
+  },
+  "course": {
+    "title": "Complete Python for Data Science",
+    "description": "A comprehensive course covering Python fundamentals and data science applications",
+    "target_audience": "Beginners to intermediate programmers interested in data science",
+    "prerequisites": [
+      "Basic programming knowledge",
+      "Mathematics fundamentals"
+    ],
+    "total_duration": "40 hours",
+    "parts": [
+      {
+        "part_number": 1,
+        "title": "Python Fundamentals",
+        "description": "Core Python concepts and syntax",
+        "learning_goals": [
+          "Understand Python syntax",
+          "Work with data types",
+          "Control flow"
+        ],
+        "lessons": [
+          {
+            "lesson_number": 1,
+            "title": "Python Environment Setup",
+            "description": "Setting up Python development environment",
+            "content": {
+              "title": "Python Environment Setup",
+              "learning_objectives": [
+                "Install Python",
+                "Set up IDE",
+                "Create first program"
+              ],
+              "content": "This lesson covers the installation and setup of Python development environment...",
+              "key_concepts": [
+                "Python installation",
+                "IDE setup",
+                "Virtual environments"
+              ],
+              "examples": [
+                "Installing Python on Windows",
+                "Setting up VS Code",
+                "Creating a virtual environment"
+              ],
+              "exercises": [
+                "Install Python 3.9+",
+                "Create your first Python file",
+                "Set up a virtual environment"
+              ],
+              "estimated_duration": "2 hours"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

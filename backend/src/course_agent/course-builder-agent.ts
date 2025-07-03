@@ -21,24 +21,44 @@ export class CourseBuilderAgent {
    * Main conversation loop
    */
   async run(): Promise<void> {
-    console.log('\n' + '='.repeat(60));
-    console.log('🎓 WELCOME TO THE COURSE BUILDER AGENT');
-    console.log('='.repeat(60));
-    console.log('I can help you create comprehensive courses on any subject!');
-    console.log('Just describe what you\'d like to learn about.');
-    console.log('\nAvailable commands:');
-    console.log('  • Enter a course subject to build a new course');
-    console.log('  • Type \'list\' to see saved courses');
-    console.log('  • Type \'load [filename]\' to view a saved course');
-    console.log('  • Type \'quit\' to exit\n');
+    console.log('🎓 Welcome to SkillUp Course Builder Agent!');
+    console.log('===============================================');
+    console.log('🔧 Create comprehensive courses on any topic');
+    console.log('🌐 Optional web search for current information');
+    console.log('💾 Automatic saving with course management');
+    console.log('===============================================\n');
+    console.log('Available commands:');
+    console.log('  • Enter any subject to build a course (e.g., "Machine Learning")');
+    console.log('  • "list" - Show all saved courses');
+    console.log('  • "load [filename]" - View a saved course');
+    console.log('  • "help" - Show this help message');
+    console.log('  • "exit" - Quit the application\n');
 
     while (true) {
       try {
-        const userInput = readline.question('🎯 What would you like to do? ');
+        const userInput = readline.question('🎯 Enter course topic or command: ');
 
-        if (userInput.toLowerCase().trim() === 'quit') {
-          console.log('👋 Thanks for using Course Builder Agent!');
+        // Handle exit command
+        if (userInput.toLowerCase().trim() === 'exit' || userInput.toLowerCase().trim() === 'quit') {
+          console.log('👋 Thanks for using SkillUp Course Builder! Goodbye!');
           break;
+        }
+
+        // Handle help command
+        if (userInput.toLowerCase().trim() === 'help') {
+          console.log('\n📖 HELP - Course Builder Commands');
+          console.log('==================================');
+          console.log('Course Creation:');
+          console.log('  • Enter any topic (e.g., "Python Programming", "Digital Marketing")');
+          console.log('  • Choose web search option for current information');
+          console.log('  • Get detailed lessons with examples and exercises');
+          console.log('\nCourse Management:');
+          console.log('  • "list" - View all saved courses');
+          console.log('  • "load [filename]" - Display a specific course');
+          console.log('\nNavigation:');
+          console.log('  • "help" - Show this help');
+          console.log('  • "exit" - Quit application\n');
+          continue;
         }
 
         if (!userInput.trim()) {
@@ -58,8 +78,24 @@ export class CourseBuilderAgent {
           continue;
         }
 
+        // Ask user about web search preference
+        console.log('\n🔍 SEARCH PREFERENCE');
+        console.log('='.repeat(40));
+        console.log('Do you want to use web search for current information?');
+        console.log('📍 Yes: Get latest trends, examples, and current best practices');
+        console.log('📚 No:  Use standard knowledge base (faster, no web access)');
+        
+        const webSearchChoice = readline.question('\nUse web search? (y/n) [default: n]: ').trim().toLowerCase();
+        const useWebSearch = webSearchChoice === 'y' || webSearchChoice === 'yes';
+        
+        if (useWebSearch) {
+          console.log('🌐 Web search enabled - gathering current information...');
+        } else {
+          console.log('📚 Using standard knowledge base...');
+        }
+
         // Run the workflow for course creation
-        const result = await this.workflow.run(userInput);
+        const result = await this.workflow.run(userInput, useWebSearch);
 
         // Display results
         this.displayResults(result);
