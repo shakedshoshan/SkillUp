@@ -11,7 +11,9 @@
     "test-agent": "ts-node-dev --respawn --transpile-only src/course_agent/test-agent.ts",
     "migrate": "ts-node src/migrations/migrate.ts",
     "migrate:up": "ts-node src/migrations/migrate.ts up",
-    "migrate:status": "ts-node src/migrations/migrate.ts status"
+    "migrate:status": "ts-node src/migrations/migrate.ts status",
+    "db:setup": "ts-node src/migrations/simple-migration.ts setup",
+    "db:status": "ts-node src/migrations/simple-migration.ts status"
   },
   "dependencies": {
     "@langchain/core": "^0.3.23",
@@ -19,11 +21,13 @@
     "@langchain/openai": "^0.3.14",
     "@supabase/supabase-js": "^2.50.3",
     "@types/pg": "^8.15.4",
+    "@types/uuid": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "pg": "^8.16.3",
     "readline-sync": "^1.4.10",
+    "uuid": "^11.1.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

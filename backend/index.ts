@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { envConfig } from './src/config/env.config';
 import { dbConfig } from './src/config/db.config';
+import userRouter from './src/route/user.route';
 
 const app = express();
 const PORT = envConfig.port;
@@ -47,15 +48,17 @@ app.get('/health/db', async (req: Request, res: Response) => {
   }
 });
 
-// API v1 routes placeholder
-app.use('/api/v1', (req: Request, res: Response) => {
+// API v1 routes
+app.use('/api/v1/users', userRouter);
+
+// API v1 info endpoint
+app.get('/api/v1', (req: Request, res: Response) => {
   res.json({
-    message: 'API v1 endpoints will be implemented here',
+    message: 'SkillUp API v1',
     availableEndpoints: [
-      'GET /api/v1/users',
-      'POST /api/v1/users',
-      'GET /api/v1/career-paths',
-      'POST /api/v1/learning-paths'
+      'GET /api/v1/users - Get all users',
+      'GET /api/v1/users/:id - Get user by ID',
+      'POST /api/v1/users - Create new user',
     ]
   });
 });

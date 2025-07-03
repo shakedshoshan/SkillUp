@@ -18,14 +18,27 @@ class MigrationRunner {
         throw new Error('DATABASE_URL environment variable is required for migrations');
       }
 
+      // Use pooled connection if available, otherwise fall back to direct connection
+      const connectionString = envConfig.database.pooled || envConfig.database.url;
+
       this.pgClient = new Client({
-        connectionString: envConfig.database.url,
+        connectionString: connectionString,
         ssl: {
           rejectUnauthorized: false
-        }
+        },
+        // Connection timeout and other settings
+        connectionTimeoutMillis: 10000,
+        query_timeout: 30000,
+        statement_timeout: 30000,
       });
 
-      await this.pgClient.connect();
+      try {
+        await this.pgClient.connect();
+        console.log('✅ PostgreSQL client connected successfully');
+      } catch (error) {
+        console.error('❌ Failed to connect to PostgreSQL:', error);
+        throw error;
+      }
     }
     return this.pgClient;
   }
@@ -78,7 +91,11 @@ class MigrationRunner {
       console.log(`✅ Migration completed: ${migration.name}`);
     } catch (error) {
       // Rollback on error
-      await client.query('ROLLBACK');
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('Failed to rollback transaction:', rollbackError);
+      }
       console.error(`❌ Migration failed: ${migration.name}`, error);
       throw error;
     }
@@ -87,6 +104,9 @@ class MigrationRunner {
   async runMigrations(): Promise<void> {
     try {
       console.log('🚀 Starting database migrations...');
+
+      // Initialize Supabase connection first
+      await dbConfig.connect();
 
       const migrations = await this.loadMigrations();
       const executedMigrations = await this.getExecutedMigrations();
@@ -110,9 +130,18 @@ class MigrationRunner {
       }
 
       console.log('🎉 All migrations completed successfully!');
+      
+      // Test Supabase connection after migrations
+      const isHealthy = await dbConfig.healthCheck();
+      if (isHealthy) {
+        console.log('✅ Supabase connection verified after migrations');
+      } else {
+        console.warn('⚠️  Supabase connection check failed after migrations');
+      }
+      
     } catch (error) {
       console.error('💥 Migration process failed:', error);
-      process.exit(1);
+      throw error;
     } finally {
       if (this.pgClient) {
         await this.pgClient.end();
@@ -122,6 +151,9 @@ class MigrationRunner {
 
   async checkMigrationStatus(): Promise<void> {
     try {
+      // Initialize Supabase connection
+      await dbConfig.connect();
+      
       const migrations = await this.loadMigrations();
       const executedMigrations = await this.getExecutedMigrations();
 
@@ -137,8 +169,14 @@ class MigrationRunner {
       const pendingCount = migrations.length - executedMigrations.length;
       console.log('─'.repeat(50));
       console.log(`Total: ${migrations.length} migrations, ${pendingCount} pending`);
+      
+      // Check Supabase health
+      const isHealthy = await dbConfig.healthCheck();
+      console.log(`Supabase Health: ${isHealthy ? '✅ Connected' : '❌ Connection Issues'}`);
+      
     } catch (error) {
       console.error('Failed to check migration status:', error);
+      throw error;
     } finally {
       if (this.pgClient) {
         await this.pgClient.end();
@@ -158,23 +196,28 @@ async function main() {
   const command = process.argv[2];
   const migrationRunner = new MigrationRunner();
 
-  switch (command) {
-    case 'up':
-      await migrationRunner.runMigrations();
-      break;
-    case 'status':
-      await migrationRunner.checkMigrationStatus();
-      break;
-    case 'rollback':
-      await migrationRunner.rollback(process.argv[3]);
-      break;
-    default:
-      console.log('SkillUp Database Migration Tool');
-      console.log('Usage:');
-      console.log('  npm run migrate up       - Run pending migrations');
-      console.log('  npm run migrate status   - Check migration status');
-      console.log('  npm run migrate rollback [name] - Rollback migration');
-      break;
+  try {
+    switch (command) {
+      case 'up':
+        await migrationRunner.runMigrations();
+        break;
+      case 'status':
+        await migrationRunner.checkMigrationStatus();
+        break;
+      case 'rollback':
+        await migrationRunner.rollback(process.argv[3]);
+        break;
+      default:
+        console.log('SkillUp Database Migration Tool');
+        console.log('Usage:');
+        console.log('  npm run migrate up       - Run pending migrations');
+        console.log('  npm run migrate status   - Check migration status');
+        console.log('  npm run migrate rollback [name] - Rollback migration');
+        break;
+    }
+  } catch (error) {
+    console.error('Migration script error:', error);
+    process.exit(1);
   }
 
   process.exit(0);
