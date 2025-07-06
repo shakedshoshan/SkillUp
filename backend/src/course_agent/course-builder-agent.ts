@@ -4,6 +4,7 @@ import { CourseBuilderWorkflow } from './workflow';
 import { CourseFormatter } from './course-formatter';
 import { CourseSaver } from './course-saver';
 import { WorkflowState } from './models';
+import { dbConfig } from '../config/db.config';
 
 // Load environment variables
 dotenv.config();
@@ -18,6 +19,21 @@ export class CourseBuilderAgent {
   }
 
   /**
+   * Initialize database connection
+   */
+  private async initializeDatabase(): Promise<void> {
+    try {
+      console.log('🔌 Connecting to database...');
+      await dbConfig.connect();
+      console.log('✅ Database connected successfully!');
+    } catch (error) {
+      console.error('❌ Database connection failed:', error);
+      console.log('Please check your database configuration in the .env file.');
+      throw error;
+    }
+  }
+
+  /**
    * Main conversation loop
    */
   async run(): Promise<void> {
@@ -27,10 +43,14 @@ export class CourseBuilderAgent {
     console.log('🌐 Optional web search for current information');
     console.log('💾 Automatic saving with course management');
     console.log('===============================================\n');
+    
+    // Initialize database connection
+    await this.initializeDatabase();
+    
     console.log('Available commands:');
     console.log('  • Enter any subject to build a course (e.g., "Machine Learning")');
     console.log('  • "list" - Show all saved courses');
-    console.log('  • "load [filename]" - View a saved course');
+    console.log('  • "load [course-id]" - View a saved course');
     console.log('  • "help" - Show this help message');
     console.log('  • "exit" - Quit the application\n');
 
@@ -53,8 +73,8 @@ export class CourseBuilderAgent {
           console.log('  • Choose web search option for current information');
           console.log('  • Get detailed lessons with examples and exercises');
           console.log('\nCourse Management:');
-          console.log('  • "list" - View all saved courses');
-          console.log('  • "load [filename]" - Display a specific course');
+          console.log('  • "list" - View all saved courses from database');
+          console.log('  • "load [course-id]" - Display a specific course by ID');
           console.log('\nNavigation:');
           console.log('  • "help" - Show this help');
           console.log('  • "exit" - Quit application\n');
@@ -73,8 +93,8 @@ export class CourseBuilderAgent {
         }
 
         if (userInput.toLowerCase().startsWith('load ')) {
-          const filename = userInput.slice(5).trim();
-          await this.loadSavedCourse(filename);
+          const courseId = userInput.slice(5).trim();
+          await this.loadSavedCourse(courseId);
           continue;
         }
 
@@ -191,24 +211,22 @@ export class CourseBuilderAgent {
       const savedCourses = await CourseSaver.listSavedCourses();
       
       if (savedCourses.length === 0) {
-        console.log('No saved courses found.');
-        console.log(`📁 Courses are saved in: ${CourseSaver.getCoursesDirectory()}`);
+        console.log('No saved courses found in database.');
+        console.log('Create a new course by entering a subject name.');
         return;
       }
 
-      console.log(`Found ${savedCourses.length} saved course(s):\n`);
+      console.log(`Found ${savedCourses.length} saved course(s) in database:\n`);
       
-      savedCourses.forEach((filename, index) => {
-        // Extract course title from filename (remove timestamp and extension)
-        const titlePart = filename.replace(/_.+\.json$/, '').replace(/-/g, ' ');
-        const displayTitle = titlePart.charAt(0).toUpperCase() + titlePart.slice(1);
-        
-        console.log(`${index + 1}. ${displayTitle}`);
-        console.log(`   📄 File: ${filename}\n`);
+      savedCourses.forEach((course, index) => {
+        console.log(`${index + 1}. ${course.title}`);
+        console.log(`   🆔 ID: ${course.id}`);
+        console.log(`   👥 Target: ${course.target_audience}`);
+        console.log(`   ⏱️  Duration: ${course.total_duration}`);
+        console.log(`   📅 Created: ${new Date(course.created_at).toLocaleDateString()}\n`);
       });
 
-      console.log(`📁 Directory: ${CourseSaver.getCoursesDirectory()}`);
-      console.log('\n💡 Use \'load [filename]\' to view a saved course');
+      console.log('💡 Use \'load [course-id]\' to view a saved course');
 
     } catch (error) {
       console.error('❌ Error listing saved courses:', error);
@@ -218,17 +236,17 @@ export class CourseBuilderAgent {
   /**
    * Load and display a saved course
    */
-  private async loadSavedCourse(filename: string): Promise<void> {
-    if (!filename) {
-      console.log('❌ Please provide a filename. Example: load my-course_2024-01-15T10-30-00.json');
+  private async loadSavedCourse(courseId: string): Promise<void> {
+    if (!courseId) {
+      console.log('❌ Please provide a course ID. Example: load 123e4567-e89b-12d3-a456-426614174000');
       return;
     }
 
-    console.log(`\n📖 Loading course: ${filename}`);
+    console.log(`\n📖 Loading course: ${courseId}`);
     console.log('='.repeat(60));
 
     try {
-      const course = await CourseSaver.loadCourse(filename);
+      const course = await CourseSaver.loadCourse(courseId);
       
       if (!course) {
         console.log('❌ Course not found. Use \'list\' to see available courses.');
@@ -245,7 +263,7 @@ export class CourseBuilderAgent {
         course_structure: course,
         current_part_index: 0,
         current_lesson_index: 0,
-        status_message: `Loaded from ${filename}`
+        status_message: `Loaded from database (ID: ${courseId})`
       };
 
       // Offer lesson details

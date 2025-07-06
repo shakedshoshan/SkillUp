@@ -274,21 +274,21 @@ export class CourseBuilderWorkflow {
       const methodUsed = state.web_search_enabled ? 'web search enhanced' : 'standard knowledge';
       console.log(`\n   ✅ Generated detailed content for ${totalLessonsProcessed} lessons using ${methodUsed}`);
 
-      // Save Course to JSON automatically
-      console.log('\n💾 Saving course to JSON file...');
+      // Save Course to database automatically
+      console.log('\n💾 Saving course to database...');
       try {
-        const savedPath = await CourseSaver.saveCourse(updatedCourseStructure);
-        const statusMessage = `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed}) | Saved to: ${savedPath}`;
+        const courseId = await CourseSaver.saveCourse(updatedCourseStructure);
+        const statusMessage = `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed}) | Saved to database with ID: ${courseId}`;
         
         return {
           course_structure: updatedCourseStructure,
           status_message: statusMessage
         };
       } catch (saveError) {
-        console.error('⚠️  Warning: Failed to save course to file:', saveError);
+        console.error('⚠️  Warning: Failed to save course to database:', saveError);
         return {
           course_structure: updatedCourseStructure,
-          status_message: `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed}) | Warning: Save failed`
+          status_message: `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed}) | Warning: Database save failed`
         };
       }
 
