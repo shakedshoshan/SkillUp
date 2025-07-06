@@ -7,16 +7,54 @@ import userRouter from './src/route/user.route';
 const app = express();
 const PORT = envConfig.port;
 
+// Trust proxy in production (for Vercel, Heroku, etc.)
+if (envConfig.trustProxy) {
+  app.set('trust proxy', 1);
+}
+
+// CORS Configuration
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow the configured frontend URL
+    if (origin === envConfig.corsOrigin || origin === envConfig.frontendUrl) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost in development
+    if (envConfig.nodeEnv === 'development' && 
+        (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      return callback(null, true);
+    }
+    
+    // Allow Vercel preview deployments
+    if (origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check route
 app.get('/', (req: Request, res: Response) => {
   res.json({
     message: 'SkillUp API is running...',
     environment: envConfig.nodeEnv,
-    timestamp: new Date().toISOString()
+    frontendUrl: envConfig.frontendUrl,
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
   });
 });
 
@@ -55,6 +93,7 @@ app.use('/api/v1/users', userRouter);
 app.get('/api/v1', (req: Request, res: Response) => {
   res.json({
     message: 'SkillUp API v1',
+    frontendUrl: envConfig.frontendUrl,
     availableEndpoints: [
       'GET /api/v1/users - Get all users',
       'GET /api/v1/users/:id - Get user by ID',
@@ -90,7 +129,9 @@ async function startServer() {
     // Start server
     app.listen(PORT, () => {
       console.log(`🚀 Server running in ${envConfig.nodeEnv} mode on port ${PORT}`);
+      console.log(`🌐 Frontend URL: ${envConfig.frontendUrl}`);
       console.log(`📍 Health check: http://localhost:${PORT}/health/db`);
+      console.log(`🔗 API Info: http://localhost:${PORT}/api/v1`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

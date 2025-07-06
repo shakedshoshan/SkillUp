@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  skillup-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      # Application Configuration
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=5000
+      
+      # AI Service Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Database Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      
+      # Optional: Database pooled connection
+      - DATABASE_POOLED_URL=${DATABASE_POOLED_URL}
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const options = { host: 'localhost', port: 5000, path: '/health/db', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Networking
+    networks:
+      - skillup-network
+
+networks:
+  skillup-network:
+    driver: bridge
+
+# Optional: For local development with file watching
+# Uncomment the development profile below for local development
+---
+version: '3.8'
+
+services:
+  # Development Backend Service
+  skillup-backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_POOLED_URL=${DATABASE_POOLED_URL}
+    
+    # Mount source code for development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    
+    # Override command for development
+    command: npm run dev
+    
+    # Enable file watching
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: sync
+          path: ./index.ts
+          target: /app/index.ts
+        - action: rebuild
+          path: package.json
+    
+    restart: unless-stopped
+    networks:
+      - skillup-network
+
+networks:
+  skillup-network:
+    driver: bridge
+
+profiles:
+  - development 

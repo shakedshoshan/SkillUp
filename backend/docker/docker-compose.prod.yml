@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  skillup-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_POOLED_URL=${DATABASE_POOLED_URL}
+      # CORS configuration for frontend
+      - CORS_ORIGIN=https://skill-up-lake.vercel.app
+      - FRONTEND_URL=https://skill-up-lake.vercel.app
+      # Additional security headers
+      - TRUST_PROXY=true
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const options = { host: 'localhost', port: 5000, path: '/health/db', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Production restart policy
+    restart: unless-stopped
+    
+    # Resource limits for production (Windows-optimized)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    
+    networks:
+      - skillup-network
+
+networks:
+  skillup-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
