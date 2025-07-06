@@ -317,7 +317,41 @@ Please respond with a JSON object following this exact structure:
   "key_concepts": ["concept1", "concept2", "concept3", "concept4", "concept5"],
   "examples": ["example1", "example2", "example3"],
   "exercises": ["exercise1", "exercise2", "exercise3"],
-  "estimated_duration": "time estimate"
+  "estimated_duration": "time estimate",
+  "quiz": {
+    "questions": [
+      {
+        "question": "Question text here?",
+        "options": [
+          {"option": "A", "text": "Option A text", "is_correct": false},
+          {"option": "B", "text": "Option B text", "is_correct": true},
+          {"option": "C", "text": "Option C text", "is_correct": false},
+          {"option": "D", "text": "Option D text", "is_correct": false}
+        ],
+        "explanation": "Brief explanation of why B is correct"
+      },
+      {
+        "question": "Second question text here?",
+        "options": [
+          {"option": "A", "text": "Option A text", "is_correct": true},
+          {"option": "B", "text": "Option B text", "is_correct": false},
+          {"option": "C", "text": "Option C text", "is_correct": false},
+          {"option": "D", "text": "Option D text", "is_correct": false}
+        ],
+        "explanation": "Brief explanation of why A is correct"
+      },
+      {
+        "question": "Third question text here?",
+        "options": [
+          {"option": "A", "text": "Option A text", "is_correct": false},
+          {"option": "B", "text": "Option B text", "is_correct": false},
+          {"option": "C", "text": "Option C text", "is_correct": true},
+          {"option": "D", "text": "Option D text", "is_correct": false}
+        ],
+        "explanation": "Brief explanation of why C is correct"
+      }
+    ]
+  }
 }`;
 
       const response = await this.client.responses.create({
@@ -358,7 +392,7 @@ Please respond with a JSON object following this exact structure:
           throw new Error('No JSON found in response');
         }
       } catch (parseError) {
-        // If JSON parsing fails, create a structured response from the text
+        // If JSON parsing fails, create a structured response from the text with default quiz
         lessonContent = {
           title: lesson.title,
           learning_objectives: [
@@ -370,13 +404,47 @@ Please respond with a JSON object following this exact structure:
           key_concepts: ["Key concept 1", "Key concept 2", "Key concept 3"],
           examples: ["Example 1", "Example 2", "Example 3"],
           exercises: ["Exercise 1", "Exercise 2", "Exercise 3"],
-          estimated_duration: "30-45 minutes"
+          estimated_duration: "30-45 minutes",
+          quiz: {
+            questions: [
+              {
+                question: `What is the main focus of ${lesson.title}?`,
+                options: [
+                  { option: "A", text: "Basic concepts only", is_correct: false },
+                  { option: "B", text: "Advanced theory only", is_correct: false },
+                  { option: "C", text: "Practical application and understanding", is_correct: true },
+                  { option: "D", text: "None of the above", is_correct: false }
+                ],
+                explanation: "The lesson focuses on both understanding and practical application."
+              },
+              {
+                question: `Which approach is most effective for learning ${lesson.title}?`,
+                options: [
+                  { option: "A", text: "Theoretical study only", is_correct: false },
+                  { option: "B", text: "Hands-on practice with examples", is_correct: true },
+                  { option: "C", text: "Memorization of facts", is_correct: false },
+                  { option: "D", text: "Passive observation", is_correct: false }
+                ],
+                explanation: "Hands-on practice with real examples provides the most effective learning experience."
+              },
+              {
+                question: `What is the recommended duration for this lesson?`,
+                options: [
+                  { option: "A", text: "15-20 minutes", is_correct: false },
+                  { option: "B", text: "30-45 minutes", is_correct: true },
+                  { option: "C", text: "60-90 minutes", is_correct: false },
+                  { option: "D", text: "2+ hours", is_correct: false }
+                ],
+                explanation: "The lesson is designed to be completed in 30-45 minutes for optimal learning."
+              }
+            ]
+          }
         };
       }
 
       // Validate and ensure the content matches our schema
       const validatedContent = LessonContentSchema.parse(lessonContent);
-      console.log(`         ✓ Content generated with web search (${validatedContent.key_concepts.length} concepts, ${validatedContent.examples.length} examples)`);
+      console.log(`         ✓ Content generated with web search (${validatedContent.key_concepts.length} concepts, ${validatedContent.examples.length} examples, ${validatedContent.quiz.questions.length} quiz questions)`);
       
       return validatedContent;
     } catch (webSearchError) {
@@ -408,7 +476,7 @@ Please respond with a JSON object following this exact structure:
     ];
 
     const lessonContent = await structuredLLM.invoke(messages);
-    console.log(`         ✓ Standard content generated (${lessonContent.key_concepts.length} concepts, ${lessonContent.examples.length} examples)`);
+    console.log(`         ✓ Standard content generated (${lessonContent.key_concepts.length} concepts, ${lessonContent.examples.length} examples, ${lessonContent.quiz.questions.length} quiz questions)`);
     
     return lessonContent;
   }

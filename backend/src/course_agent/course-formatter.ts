@@ -40,6 +40,7 @@ export class CourseFormatter {
           output.push(`     ⏱️  Duration: ${content.estimated_duration}`);
           const keyConcepts = content.key_concepts.slice(0, 3).join(', ');
           output.push(`     📍 Key Concepts: ${keyConcepts}${content.key_concepts.length > 3 ? '...' : ''}`);
+          output.push(`     ❓ Quiz: ${content.quiz.questions.length} questions`);
         }
       });
     });
@@ -85,6 +86,19 @@ export class CourseFormatter {
     output.push(`\n🏋️ Exercises:`);
     content.exercises.forEach(exercise => {
       output.push(`  • ${exercise}`);
+    });
+    
+    // Add quiz formatting
+    output.push(`\n❓ Quiz (${content.quiz.questions.length} Questions):`);
+    content.quiz.questions.forEach((question, idx) => {
+      output.push(`\n  Question ${idx + 1}: ${question.question}`);
+      question.options.forEach(option => {
+        const marker = option.is_correct ? '✅' : '  ';
+        output.push(`    ${marker} ${option.option}. ${option.text}`);
+      });
+      if (question.explanation) {
+        output.push(`    💡 Explanation: ${question.explanation}`);
+      }
     });
     
     output.push(`\n⏱️  Estimated Duration: ${content.estimated_duration}`);

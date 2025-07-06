@@ -71,7 +71,16 @@ Your task is to create comprehensive lesson content that includes:
 - Key concepts and terminology (including recent developments)
 - Practical examples from current sources
 - Hands-on exercises or activities using modern tools/practices
+- **QUIZ: Exactly 3 American multiple choice questions with 4 options each (A, B, C, D)**
 - Realistic time estimates
+
+**QUIZ REQUIREMENTS:**
+- Each question must test understanding of the lesson content
+- All questions must be American multiple choice format
+- Each question must have exactly 4 answer options (A, B, C, D)
+- Only one option per question should be correct
+- Questions should cover different aspects of the lesson
+- Include brief explanations for correct answers (optional)
 
 Make the content engaging, practical, and immediately applicable. Incorporate current information and examples to ensure the lesson is up-to-date and relevant.
 
@@ -83,7 +92,21 @@ You must respond with a valid JSON object:
   "key_concepts": ["concept1", "concept2"],
   "examples": ["example1", "example2"],
   "exercises": ["exercise1", "exercise2"],
-  "estimated_duration": "time estimate"
+  "estimated_duration": "time estimate",
+  "quiz": {
+    "questions": [
+      {
+        "question": "Question text here?",
+        "options": [
+          {"option": "A", "text": "Option A text", "is_correct": false},
+          {"option": "B", "text": "Option B text", "is_correct": true},
+          {"option": "C", "text": "Option C text", "is_correct": false},
+          {"option": "D", "text": "Option D text", "is_correct": false}
+        ],
+        "explanation": "Brief explanation of why B is correct"
+      }
+    ]
+  }
 }`;
 
   /**
@@ -152,7 +175,16 @@ Using the web search results and your knowledge, create detailed lesson content 
 - 5-8 key concepts/terms (including recent developments)
 - 3-5 practical examples (preferably from current sources)
 - 3-5 exercises or activities (using modern tools/practices)
+- **EXACTLY 3 American multiple choice questions with 4 options each (A, B, C, D)**
 - Realistic duration estimate
+
+**QUIZ REQUIREMENTS:**
+- Each question must test understanding of the lesson content
+- All questions must be American multiple choice format
+- Each question must have exactly 4 answer options (A, B, C, D)
+- Only one option per question should be correct
+- Questions should cover different aspects of the lesson
+- Include brief explanations for correct answers
 
 Make the content practical, engaging, and immediately applicable with current information.
 

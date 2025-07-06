@@ -1,5 +1,24 @@
 import { z } from 'zod'; // zod is a library for validating and parsing data
 
+// Quiz Option Schema
+export const QuizOptionSchema = z.object({
+  option: z.string(), // A, B, C, D
+  text: z.string(),
+  is_correct: z.boolean(),
+});
+
+// Quiz Question Schema
+export const QuizQuestionSchema = z.object({
+  question: z.string(),
+  options: z.array(QuizOptionSchema).length(4), // Exactly 4 options
+  explanation: z.string().optional(), // Optional explanation of the correct answer
+});
+
+// Quiz Schema
+export const QuizSchema = z.object({
+  questions: z.array(QuizQuestionSchema).length(3), // Exactly 3 questions per lesson
+});
+
 // Lesson Content Schema
 export const LessonContentSchema = z.object({
   title: z.string(),
@@ -9,6 +28,7 @@ export const LessonContentSchema = z.object({
   examples: z.array(z.string()),
   exercises: z.array(z.string()),
   estimated_duration: z.string(),
+  quiz: QuizSchema, // Add quiz to every lesson
 });
 
 // Course Lesson Schema
@@ -50,6 +70,9 @@ export const WorkflowStateSchema = z.object({
 });
 
 // TypeScript Types (inferred from schemas)
+export type QuizOption = z.infer<typeof QuizOptionSchema>;
+export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
+export type Quiz = z.infer<typeof QuizSchema>;
 export type LessonContent = z.infer<typeof LessonContentSchema>;
 export type CourseLesson = z.infer<typeof CourseLessonSchema>;
 export type CoursePart = z.infer<typeof CoursePartSchema>;
