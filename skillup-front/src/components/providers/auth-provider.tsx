@@ -1,11 +1,21 @@
 'use client'
 
-import { createContext, useContext, useEffect } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { useAuthStore } from '@/lib/stores/auth-store'
 import { User } from '@/lib/supabase/types'
 
-const AuthContext = createContext<{}>({})
+interface AuthContextType {
+  user: SupabaseUser | null
+  session: Session | null
+  userProfile: User | null
+  loading: boolean
+  initialized: boolean
+  signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -20,31 +30,95 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { setUser, setUserProfile, setLoading } = useAuthStore()
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [userProfile, setUserProfile] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
+  
   const supabase = createClient()
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://skillup-backend.vercel.app' 
+        : 'http://localhost:5000'
+      
+      const response = await fetch(`${backendUrl}/api/v1/users/${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserProfile(data.data)
+      } else if (response.status === 404) {
+        // User doesn't exist in backend, create them
+        const createResponse = await fetch(`${backendUrl}/api/v1/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: userId,
+            email: user?.email,
+            full_name: user?.user_metadata?.full_name || user?.user_metadata?.name,
+            username: user?.user_metadata?.username,
+            profile_picture_url: user?.user_metadata?.avatar_url,
+          }),
+        })
+        
+        if (createResponse.ok) {
+          const createData = await createResponse.json()
+          setUserProfile(createData.data)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+    }
+  }
+
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchUserProfile(user.id)
+    }
+  }
+
+  const signOut = async () => {
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      
+      setUser(null)
+      setSession(null)
+      setUserProfile(null)
+    } catch (error) {
+      console.error('Error signing out:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        // Fetch user profile from backend
-        try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}/api/users/${session.user.id}`)
-          if (response.ok) {
-            const data = await response.json()
-            setUserProfile(data.data)
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error)
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting session:', error)
+          return
         }
-      } else {
-        setUserProfile(null)
+
+        setSession(session)
+        setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error)
+      } finally {
+        setLoading(false)
+        setInitialized(true)
       }
-      
-      setLoading(false)
     }
 
     getInitialSession()
@@ -52,54 +126,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id)
+        
+        setSession(session)
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          // Sync with backend when user signs in
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}/api/users/${session.user.id}`)
-            if (response.ok) {
-              const data = await response.json()
-              setUserProfile(data.data)
-            } else if (response.status === 404) {
-              // User doesn't exist in backend, create them
-              const createResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}/api/users`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  id: session.user.id,
-                  email: session.user.email,
-                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
-                  username: session.user.user_metadata?.username,
-                  profile_picture_url: session.user.user_metadata?.avatar_url,
-                }),
-              })
-              
-              if (createResponse.ok) {
-                const createData = await createResponse.json()
-                setUserProfile(createData.data)
-              }
-            }
-          } catch (error) {
-            console.error('Error syncing user with backend:', error)
-          }
+          await fetchUserProfile(session.user.id)
         } else {
           setUserProfile(null)
         }
         
         setLoading(false)
+        setInitialized(true)
       }
     )
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [setUser, setUserProfile, setLoading, supabase.auth])
+  }, [])
+
+  const value: AuthContextType = {
+    user,
+    session,
+    userProfile,
+    loading,
+    initialized,
+    signOut,
+    refreshProfile,
+  }
 
   return (
-    <AuthContext.Provider value={{}}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

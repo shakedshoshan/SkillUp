@@ -2,29 +2,23 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/lib/stores/auth-store'
+import { useAuth } from '../hooks/use-auth'
 import { Button } from '@/components/ui/button'
+import { FullPageSpinner } from '@/components/ui/loading-spinner'
 import { ArrowRight, BookOpen, Target, Users } from 'lucide-react'
 
 export default function HomePage() {
   const router = useRouter()
-  const { user, loading } = useAuthStore()
+  const { user, loading, initialized } = useAuth()
 
   useEffect(() => {
-    if (!loading && user) {
+    if (initialized && !loading && user) {
       router.push('/dashboard')
     }
-  }, [user, loading, router])
+  }, [user, loading, initialized, router])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
+  if (!initialized || loading) {
+    return <FullPageSpinner text="Loading..." />
   }
 
   return (
