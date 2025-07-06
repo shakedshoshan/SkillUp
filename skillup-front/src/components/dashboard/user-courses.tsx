@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { CourseService, type Course } from '@/lib/services/course.service'
 import { useAuth } from '../../hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ interface UserCoursesProps {
 
 export default function UserCourses({ className }: UserCoursesProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -132,8 +134,8 @@ export default function UserCourses({ className }: UserCoursesProps) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h4 className="font-medium text-gray-900">{course.title}</h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(course.difficulty)}`}>
-                      {course.difficulty}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(course.difficulty || course.difficulty_level)}`}>
+                      {course.difficulty || course.difficulty_level}
                     </span>
                     {course.is_published ? (
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -149,26 +151,38 @@ export default function UserCourses({ className }: UserCoursesProps) {
                     {course.description}
                   </p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{course.category}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{course.estimated_hours}h</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span>{formatPrice(course.price, course.currency)}</span>
-                    </div>
+                    {course.category && (
+                      <div className="flex items-center gap-1">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{course.category}</span>
+                      </div>
+                    )}
+                    {course.estimated_hours && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{course.estimated_hours}h</span>
+                      </div>
+                    )}
+                    {course.total_duration && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{course.total_duration}</span>
+                      </div>
+                    )}
+                    {course.price && course.currency && (
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="h-4 w-4" />
+                        <span>{formatPrice(course.price, course.currency)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push(`/course/${course.id}`)}
+                  >
                     <Eye className="h-4 w-4 mr-1" />
                     View
                   </Button>
