@@ -13,8 +13,8 @@ CREATE TABLE public.course_enrollments (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT course_enrollments_pkey PRIMARY KEY (id),
-  CONSTRAINT course_enrollments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT course_enrollments_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
+  CONSTRAINT course_enrollments_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id),
+  CONSTRAINT course_enrollments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.course_lessons (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -65,8 +65,8 @@ CREATE TABLE public.lesson_completions (
   time_spent_minutes integer,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT lesson_completions_pkey PRIMARY KEY (id),
-  CONSTRAINT lesson_completions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT lesson_completions_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.course_lessons(id)
+  CONSTRAINT lesson_completions_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.course_lessons(id),
+  CONSTRAINT lesson_completions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.lesson_content (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -123,6 +123,10 @@ CREATE TABLE public.users (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   tokens integer DEFAULT 0,
   skill_score integer DEFAULT 0,
+  username text UNIQUE,
+  full_name text,
+  bio text,
+  profile_picture_url text,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_details_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
