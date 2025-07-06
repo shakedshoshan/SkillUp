@@ -3,6 +3,7 @@ import cors from 'cors';
 import { envConfig } from './src/config/env.config';
 import { dbConfig } from './src/config/db.config';
 import userRouter from './src/route/user.route';
+import courseRouter from './src/route/course.route';
 
 const app = express();
 const PORT = envConfig.port;
@@ -88,6 +89,7 @@ app.get('/health/db', async (req: Request, res: Response) => {
 
 // API v1 routes
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/courses', courseRouter);
 
 // API v1 info endpoint
 app.get('/api/v1', (req: Request, res: Response) => {
@@ -98,6 +100,10 @@ app.get('/api/v1', (req: Request, res: Response) => {
       'GET /api/v1/users - Get all users',
       'GET /api/v1/users/:id - Get user by ID',
       'POST /api/v1/users - Create new user',
+      'GET /api/v1/courses - Get all courses',
+      'GET /api/v1/courses/published - Get published courses only',
+      'GET /api/v1/courses/user/:userId - Get courses by user ID (basic data only)',
+      'GET /api/v1/courses/:id - Get course by ID with all nested data (parts, lessons, content, quizzes)',
     ]
   });
 });

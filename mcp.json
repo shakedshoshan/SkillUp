@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "supabase-skillup": {
+      "command": "pnpm",
+      "args": [
+        "dlx",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=moqygkmxepjepqxcbhhk"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sb_secret_apte9P2txEaYUN0bt-XiQw_HGquOBSR"
+      }
+    }
+  }
+} 

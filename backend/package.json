@@ -11,9 +11,7 @@
     "test-agent": "ts-node-dev --respawn --transpile-only src/course_agent/test-agent.ts",
     "migrate": "ts-node src/migrations/migrate.ts",
     "migrate:up": "ts-node src/migrations/migrate.ts up",
-    "migrate:status": "ts-node src/migrations/migrate.ts status",
-    "db:setup": "ts-node src/migrations/simple-migration.ts setup",
-    "db:status": "ts-node src/migrations/simple-migration.ts status"
+    "migrate:status": "ts-node src/migrations/migrate.ts status"
   },
   "dependencies": {
     "@langchain/core": "^0.3.23",
