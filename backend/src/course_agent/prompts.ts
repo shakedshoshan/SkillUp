@@ -69,18 +69,26 @@ Your task is to create comprehensive lesson content that includes:
 - Clear learning objectives
 - Well-structured content explanation incorporating current information
 - Key concepts and terminology (including recent developments)
-- Practical examples from current sources
+- Practical examples from current sources (as simple strings, NOT objects)
 - Hands-on exercises or activities using modern tools/practices
 - **QUIZ: Exactly 3 American multiple choice questions with 4 options each (A, B, C, D)**
 - Realistic time estimates
 
-**QUIZ REQUIREMENTS:**
+**EXAMPLES FORMAT - IMPORTANT:**
+- The "examples" field must be an array of simple strings
+- Each example should be a concise description of a practical application
+- DO NOT use objects with keys like {"example1": "..."}
+- Use format: ["Example description 1", "Example description 2"]
+
+**QUIZ REQUIREMENTS - STRICT FORMAT:**
+- MUST include exactly 3 questions (no more, no less)
 - Each question must test understanding of the lesson content
 - All questions must be American multiple choice format
-- Each question must have exactly 4 answer options (A, B, C, D)
-- Only one option per question should be correct
+- Each question MUST have exactly 4 answer options labeled A, B, C, D (this is mandatory)
+- Only one option per question should be correct (is_correct: true)
+- All other options must be false (is_correct: false)
 - Questions should cover different aspects of the lesson
-- Include brief explanations for correct answers (optional)
+- Include brief explanations for correct answers
 
 Make the content engaging, practical, and immediately applicable. Incorporate current information and examples to ensure the lesson is up-to-date and relevant.
 
@@ -90,7 +98,7 @@ You must respond with a valid JSON object:
   "learning_objectives": ["objective1", "objective2"],
   "content": "Detailed lesson content explanation with current information",
   "key_concepts": ["concept1", "concept2"],
-  "examples": ["example1", "example2"],
+  "examples": ["Using React.js to build interactive user interfaces", "Building REST APIs with Express.js and Node.js"],
   "exercises": ["exercise1", "exercise2"],
   "estimated_duration": "time estimate",
   "quiz": {
@@ -178,11 +186,13 @@ Using the web search results and your knowledge, create detailed lesson content 
 - **EXACTLY 3 American multiple choice questions with 4 options each (A, B, C, D)**
 - Realistic duration estimate
 
-**QUIZ REQUIREMENTS:**
+**QUIZ REQUIREMENTS - STRICT FORMAT:**
+- MUST include exactly 3 questions (no more, no less)
 - Each question must test understanding of the lesson content
 - All questions must be American multiple choice format
-- Each question must have exactly 4 answer options (A, B, C, D)
-- Only one option per question should be correct
+- Each question MUST have exactly 4 answer options labeled A, B, C, D (this is mandatory)
+- Only one option per question should be correct (is_correct: true)
+- All other options must be false (is_correct: false)
 - Questions should cover different aspects of the lesson
 - Include brief explanations for correct answers
 

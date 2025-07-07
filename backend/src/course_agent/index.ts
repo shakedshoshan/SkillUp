@@ -1,6 +1,4 @@
-// Export all main classes and types
-export { CourseBuilderAgent } from './course-builder-agent';
-export { JsonCourseBuilderAgent } from './course-builder-json';
+// Export web API classes and utilities
 export { StreamingCourseBuilderAgent } from './course-builder-stream';
 export { CourseBuilderWorkflow } from './workflow';
 export { CourseFormatter } from './course-formatter';

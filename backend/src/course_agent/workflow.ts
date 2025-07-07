@@ -4,7 +4,6 @@ import { WorkflowState, CourseStructure, CoursePart, CourseLesson, LessonContent
 import { CoursePrompts } from './prompts';
 import { KnowledgeService } from './knowledge-service';
 import { CourseFormatter } from './course-formatter';
-import { CourseSaver } from './course-saver';
 import { 
   WorkflowStateSchema, 
   CourseStructureSchema, 
@@ -14,9 +13,16 @@ import {
 import { z } from 'zod';
 import { OpenAI } from 'openai';
 
-// Define a lessons response schema for structured output
+// Define a lessons response schema for Step 2 (headers only, no content)
+const LessonHeaderSchema = z.object({
+  lesson_number: z.number(),
+  title: z.string(),
+  description: z.string(),
+  // No content field - content is generated in Step 3
+});
+
 const LessonsResponseSchema = z.object({
-  lessons: z.array(CourseLessonSchema)
+  lessons: z.array(LessonHeaderSchema)
 });
 
 export class CourseBuilderWorkflow {
@@ -274,23 +280,10 @@ export class CourseBuilderWorkflow {
       const methodUsed = state.web_search_enabled ? 'web search enhanced' : 'standard knowledge';
       console.log(`\n   ✅ Generated detailed content for ${totalLessonsProcessed} lessons using ${methodUsed}`);
 
-      // Save Course to database automatically
-      console.log('\n💾 Saving course to database...');
-      try {
-        const courseId = await CourseSaver.saveCourse(updatedCourseStructure);
-        const statusMessage = `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed}) | Saved to database with ID: ${courseId}`;
-        
-        return {
-          course_structure: updatedCourseStructure,
-          status_message: statusMessage
-        };
-      } catch (saveError) {
-        console.error('⚠️  Warning: Failed to save course to database:', saveError);
-        return {
-          course_structure: updatedCourseStructure,
-          status_message: `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed}) | Warning: Database save failed`
-        };
-      }
+      return {
+        course_structure: updatedCourseStructure,
+        status_message: `Course complete with ${totalLessonsProcessed} fully detailed lessons (${methodUsed})`
+      };
 
     } catch (error) {
       console.error('   ❌ Error generating lesson content:', error);
@@ -315,7 +308,7 @@ Please respond with a JSON object following this exact structure:
   "learning_objectives": ["objective1", "objective2", "objective3"],
   "content": "detailed lesson content explanation with current information",
   "key_concepts": ["concept1", "concept2", "concept3", "concept4", "concept5"],
-  "examples": ["example1", "example2", "example3"],
+  "examples": ["Using real-world applications", "Implementing practical solutions", "Working with current industry standards"],
   "exercises": ["exercise1", "exercise2", "exercise3"],
   "estimated_duration": "time estimate",
   "quiz": {
@@ -402,7 +395,7 @@ Please respond with a JSON object following this exact structure:
           ],
           content: responseText,
           key_concepts: ["Key concept 1", "Key concept 2", "Key concept 3"],
-          examples: ["Example 1", "Example 2", "Example 3"],
+          examples: ["Practical application scenario", "Real-world implementation example", "Current industry case study"],
           exercises: ["Exercise 1", "Exercise 2", "Exercise 3"],
           estimated_duration: "30-45 minutes",
           quiz: {

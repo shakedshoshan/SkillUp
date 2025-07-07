@@ -4,20 +4,19 @@ A Node.js implementation of an intelligent course building agent using LangChain
 
 ## Features
 
-- **🤔 User Choice**: Ask users whether to use web search or standard knowledge
 - **🌐 Web Search Integration**: Uses OpenAI's web search capabilities to gather current information
 - **📚 Complete Course Generation**: Creates structured courses with parts and lessons
-- **🎯 Interactive CLI**: Easy-to-use command-line interface
-- **💾 Automatic Saving**: Saves courses to JSON files with timestamps
-- **📊 Course Management**: List and view previously created courses
+- **🔄 Real-time Streaming**: WebSocket-based progress updates for web UI
+- **💾 Database Integration**: Automatic saving to Supabase database
+- **📊 Course Management**: Full CRUD operations for courses
 - **🔄 Intelligent Workflow**: 3-step process following LangGraph patterns
 - **⚡ Fallback Support**: Graceful fallback to standard models if web search fails
 
 ## Web Search Enhancement
 
-When creating a course, users can choose between two modes:
+The course builder supports two modes:
 
-### 🌐 Web Search Mode (Optional)
+### 🌐 Web Search Mode
 - Uses **OpenAI's Responses API** with `web_search_preview` tool
 - Gathers latest trends and developments
 - Finds current real-world examples and case studies
@@ -25,7 +24,7 @@ When creating a course, users can choose between two modes:
 - Accesses recent statistics and research findings
 - Incorporates current industry standards and practices
 
-### 📚 Standard Mode (Default)
+### 📚 Standard Mode
 - Uses standard knowledge base without web access
 - Faster processing time
 - No additional API costs for web search
@@ -43,42 +42,37 @@ When creating a course, users can choose between two modes:
 npm install
 ```
 
-## Usage
+## Usage (Web API)
 
-### Interactive Mode
-```bash
-npm run course-agent
+### Generate Course via API
+```typescript
+import { StreamingCourseBuilderAgent } from './course_agent';
+
+const agent = new StreamingCourseBuilderAgent((message) => {
+  console.log('Progress:', message);
+});
+
+const courseId = await agent.generateCourse({
+  course_topic: "Machine Learning Fundamentals",
+  search_web: true,
+  user_id: "user-uuid-here"
+});
 ```
 
-### Available Commands
-- **Create new course**: Enter any subject (e.g., "Python for Data Science")
-  - **Web Search Choice**: Choose whether to use web search for current information
-  - **📍 Yes**: Get latest trends, examples, and current best practices
-  - **📚 No**: Use standard knowledge base (faster, no web access)
-- **`list`**: Show all saved courses
-- **`load [filename]`**: View a specific saved course
-- **`help`**: Show available commands
-- **`exit`**: Quit the application
+### WebSocket Integration
+The agent integrates with Socket.IO for real-time progress updates:
 
-### Test Mode
-```bash
-npm run test-agent
+```typescript
+// In your route handler
+const agent = new StreamingCourseBuilderAgent((message) => {
+  io.to(sessionId).emit('course_generation_update', message);
+});
 ```
-
-## Example Usage Flow
-
-1. **Start the agent**: `npm run course-agent`
-2. **Enter topic**: "Machine Learning Fundamentals"
-3. **Choose search mode**: 
-   - `y` for web search (current ML trends, latest tools)
-   - `n` for standard knowledge (faster, reliable basics)
-4. **Get results**: 3-5 main parts with 3-5 lessons each
-5. **Auto-save**: Course saved to `created_courses/` directory
 
 ## Example Output
 
 ### With Web Search:
-- **🌐 Search the web** for current ML trends, tools, and practices
+- **🌐 Search the web** for current trends, tools, and practices
 - **📋 Generate structure** with latest industry insights
 - **📚 Create lessons** incorporating recent developments
 - **📝 Generate content** with current examples and cutting-edge techniques
@@ -95,15 +89,16 @@ Each lesson includes:
 - Key concepts and terminology
 - Practical examples
 - Hands-on exercises
+- Interactive quiz questions
 - Realistic time estimates
 
 ## Architecture
 
 - **`workflow.ts`**: Main orchestrator with conditional web search
-- **`course-builder-agent.ts`**: Interactive CLI with search preference
+- **`course-builder-stream.ts`**: Streaming agent for web API integration
 - **`models.ts`**: TypeScript data models and Zod schemas
 - **`prompts.ts`**: System and user prompts with web search instructions
-- **`course-saver.ts`**: Course persistence utilities
+- **`course-saver.ts`**: Database persistence utilities
 - **`course-formatter.ts`**: Display formatting utilities
 - **`knowledge-service.ts`**: Subject knowledge gathering
 
@@ -111,7 +106,18 @@ Each lesson includes:
 
 - **Web Search Model**: OpenAI Responses API with `web_search_preview` tool
 - **Standard Model**: `gpt-3.5-turbo` for structure and lesson planning
-- **User Choice**: Interactive prompt for search preference
+- **Streaming**: Real-time progress updates via WebSocket
+- **Database**: Supabase integration for course persistence
 - **Structured Output**: Zod schemas ensure consistent JSON responses
 - **Error Handling**: Automatic fallback to standard models if web search fails
-- **TypeScript**: Full type safety with comprehensive interfaces 
+- **TypeScript**: Full type safety with comprehensive interfaces
+
+## Integration
+
+This course agent is designed to integrate with the SkillUp web application:
+
+1. **Frontend** calls `/api/course-generation/generate` endpoint
+2. **Backend route** creates `StreamingCourseBuilderAgent` instance
+3. **Agent** runs workflow and emits progress via WebSocket
+4. **Course** is automatically saved to database upon completion
+5. **Frontend** receives real-time updates and final course ID 
