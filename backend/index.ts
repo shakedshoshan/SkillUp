@@ -6,6 +6,7 @@ import { envConfig } from './src/config/env.config';
 import { dbConfig } from './src/config/db.config';
 import userRouter from './src/route/user.route';
 import courseRouter from './src/route/course.route';
+import lessonRouter from './src/route/lesson.route';
 import courseGenerationRouter, { setupCourseGenerationWebSocket } from './src/route/course-generation.route';
 
 const app = express();
@@ -121,6 +122,7 @@ app.get('/health/db', async (req: Request, res: Response) => {
 // API v1 routes
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/courses', courseRouter);
+app.use('/api/v1/lessons', lessonRouter);
 app.use('/api/v1/course-generation', courseGenerationRouter);
 
 // API v1 info endpoint
@@ -131,11 +133,18 @@ app.get('/api/v1', (req: Request, res: Response) => {
     availableEndpoints: [
       'GET /api/v1/users - Get all users',
       'GET /api/v1/users/:id - Get user by ID',
-      'POST /api/v1/users - Create new user',
+      'GET /api/v1/users/:userId/enrolled-courses - Get enrolled courses for user',
       'GET /api/v1/courses - Get all courses',
       'GET /api/v1/courses/published - Get published courses only',
       'GET /api/v1/courses/user/:userId - Get courses by user ID (basic data only)',
+      'POST /api/v1/courses/:courseId/enroll - Enroll user in course',
+      'GET /api/v1/courses/:courseId/enrollment/:userId - Get course enrollment',
+      'PUT /api/v1/courses/:courseId/progress - Update course progress',
+      'GET /api/v1/courses/:courseId/completions/:userId - Get all lesson completions for a course',
       'GET /api/v1/courses/:id - Get course by ID with all nested data (parts, lessons, content, quizzes)',
+      'POST /api/v1/lessons/:lessonId/complete - Complete a lesson',
+      'GET /api/v1/lessons/:lessonId/completion/:userId - Get lesson completion',
+      'POST /api/v1/lessons/:lessonId/quiz/submit - Submit quiz for lesson',
       'POST /api/v1/course-generation/generate - Generate a course',
       'GET /api/v1/course-generation/status/:sessionId - Get course generation status',
       'GET /api/v1/course-generation/logs/:sessionId - Get course generation logs',

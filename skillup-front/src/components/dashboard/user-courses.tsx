@@ -1,35 +1,61 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { CourseService, type Course } from '@/lib/services'
-import { useAuth } from '../../hooks/use-auth'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { BookOpen, Clock, DollarSign, Plus, Edit, Eye, ExternalLink, Star, PlayCircle } from 'lucide-react'
+import { 
+  type Course, 
+  type CourseEnrollment,
+  CourseService 
+} from '@/lib/services/course.service'
+import { useAuth } from '@/hooks/use-auth'
+import { 
+  BookOpen, 
+  Clock, 
+  Users, 
+  Award, 
+  Play, 
+  CheckCircle,
+  TrendingUp,
+  Calendar,
+  Target
+} from 'lucide-react'
+import Link from 'next/link'
 
-interface UserCoursesProps {
-  className?: string
+interface CourseWithEnrollment extends Course {
+  enrollment: CourseEnrollment
 }
 
-export default function UserCourses({ className }: UserCoursesProps) {
+export function UserCourses() {
   const { user } = useAuth()
-  const router = useRouter()
-  const [courses, setCourses] = useState<Course[]>([])
+  const [enrolledCourses, setEnrolledCourses] = useState<CourseWithEnrollment[]>([])
+  const [createdCourses, setCreatedCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'enrolled' | 'created'>('enrolled')
 
   useEffect(() => {
     const fetchCourses = async () => {
-      if (!user?.id) return
+      if (!user) return
 
       try {
         setLoading(true)
         setError(null)
-        const response = await CourseService.getCoursesByUser(user.id)
-        setCourses(response.data)
+
+        // Fetch enrolled courses
+        const enrolledResult = await CourseService.getEnrolledCourses(user.id)
+        if (enrolledResult.success && enrolledResult.data) {
+          setEnrolledCourses(enrolledResult.data)
+        }
+
+        // Fetch created courses
+        const createdResult = await CourseService.getCoursesByUser(user.id)
+        if (createdResult.success && createdResult.data) {
+          setCreatedCourses(createdResult.data)
+        }
+
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch courses')
       } finally {
@@ -38,216 +64,270 @@ export default function UserCourses({ className }: UserCoursesProps) {
     }
 
     fetchCourses()
-  }, [user?.id])
+  }, [user])
 
-  const getDifficultyVariant = (difficulty: string | undefined | null) => {
-    if (!difficulty) {
-      return 'secondary';
-    }
+  const getDifficultyColor = (difficulty: string | undefined | null) => {
+    if (!difficulty) return 'bg-gray-100 text-gray-800'
     
     switch (difficulty.toLowerCase()) {
       case 'beginner':
-        return 'success'
+        return 'bg-green-100 text-green-800'
       case 'intermediate':
-        return 'warning'
+        return 'bg-yellow-100 text-yellow-800'
       case 'advanced':
-        return 'danger'
+        return 'bg-red-100 text-red-800'
       default:
-        return 'secondary'
+        return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'USD',
-    }).format(price)
+  const getProgressColor = (percentage: number) => {
+    if (percentage === 100) return 'bg-green-500'
+    if (percentage >= 75) return 'bg-blue-500'
+    if (percentage >= 50) return 'bg-yellow-500'
+    if (percentage >= 25) return 'bg-orange-500'
+    return 'bg-gray-400'
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   }
 
   if (loading) {
     return (
-      <Card variant="default" className={className}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              <span>Your Courses</span>
-            </CardTitle>
-            <Button disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Course
-            </Button>
-          </div>
-          <CardDescription>Manage and track your created courses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="py-8">
-            <LoadingSpinner text="Loading your courses..." />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <LoadingSpinner text="Loading your courses..." />
+        </div>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card variant="default" className={className}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              <span>Your Courses</span>
-            </CardTitle>
-            <Button onClick={() => router.push('/generate-course')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Course
-            </Button>
-          </div>
-          <CardDescription>Manage and track your created courses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-red-500 mb-2">Failed to load courses</div>
-            <p className="text-gray-600 text-sm mb-4">{error}</p>
-            <Button 
-              variant="outline" 
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="text-red-500 mb-2">Failed to load courses</div>
+          <p className="text-gray-600 text-sm mb-4">{error}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card variant="default" className={className}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <BookOpen className="h-5 w-5 text-blue-600" />
-            <span>Your Courses</span>
-          </CardTitle>
-          <Button onClick={() => router.push('/generate-course')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Course
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">My Courses</h2>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={activeTab === 'enrolled' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('enrolled')}
+          >
+            <BookOpen className="h-4 w-4 mr-2" />
+            Enrolled ({enrolledCourses.length})
+          </Button>
+          <Button
+            variant={activeTab === 'created' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('created')}
+          >
+            <Award className="h-4 w-4 mr-2" />
+            Created ({createdCourses.length})
           </Button>
         </div>
-        <CardDescription>Manage and track your created courses</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {courses.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-blue-500" />
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">No courses created yet</h4>
-            <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-              Start building your first course with our AI-powered course generator. 
-              Share your knowledge and expertise with learners worldwide.
-            </p>
-            <Button 
-              onClick={() => router.push('/generate-course')}
-              className="inline-flex items-center"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Course
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <Card key={course.id} variant="interactive" className="group">
-                <CardContent className="p-0">
-                  <div className="aspect-video bg-gradient-to-br from-blue-100 to-indigo-100 rounded-t-lg flex items-center justify-center">
-                    <PlayCircle className="h-12 w-12 text-blue-600 group-hover:text-blue-700 transition-colors" />
-                  </div>
-                  
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-2 line-clamp-1">
-                          {course.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Badge variant={getDifficultyVariant(course.difficulty || course.difficulty_level)} size="sm">
-                            {course.difficulty || course.difficulty_level}
-                          </Badge>
-                          <Badge variant={course.is_published ? 'success' : 'secondary'} size="sm">
-                            {course.is_published ? 'Published' : 'Draft'}
-                          </Badge>
-                        </div>
+      </div>
+
+      {/* Course Content */}
+      {activeTab === 'enrolled' ? (
+        <div className="space-y-4">
+          {enrolledCourses.length === 0 ? (
+            <Card className="p-8 text-center">
+              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled courses yet</h3>
+              <p className="text-gray-600 mb-4">
+                Start your learning journey by enrolling in courses that interest you.
+              </p>
+              <Link href="/courses">
+                <Button>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Browse Courses
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {enrolledCourses.map((course) => (
+                <Card key={course.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="space-y-4">
+                    {/* Course Header */}
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-semibold text-gray-900 line-clamp-2">{course.title}</h3>
+                        <Badge className={getDifficultyColor(course.difficulty_level)}>
+                          {course.difficulty_level}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>
+                    </div>
+
+                    {/* Progress */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Progress</span>
+                        <span className="font-medium">{course.enrollment.progress_percentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(course.enrollment.progress_percentage)}`}
+                          style={{ width: `${course.enrollment.progress_percentage}%` }}
+                        />
                       </div>
                     </div>
-                    
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {course.description}
-                    </p>
-                    
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        {course.category && (
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="h-3 w-3" />
-                            <span>{course.category}</span>
-                          </div>
-                        )}
-                        {(course.estimated_hours || course.total_duration) && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{course.estimated_hours ? `${course.estimated_hours}h` : course.total_duration}</span>
-                          </div>
-                        )}
-                        {course.price && course.currency && (
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            <span>{formatPrice(course.price, course.currency)}</span>
-                          </div>
-                        )}
+
+                    {/* Course Info */}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{course.total_duration}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Star className="h-3 w-3 fill-current" />
-                        <span>0.0</span>
+                      <div className="flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        <span>Part {course.enrollment.current_part_number}</span>
                       </div>
                     </div>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
+
+                    {/* Enrollment Info */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Calendar className="h-3 w-3" />
+                      <span>Enrolled {formatDate(course.enrollment.enrollment_date)}</span>
+                      {course.enrollment.completion_date && (
+                        <>
+                          <span>•</span>
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span className="text-green-600">Completed {formatDate(course.enrollment.completion_date)}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <Link 
+                        href={`/course/${course.id}/study?part=${course.enrollment.current_part_number}&lesson=${course.enrollment.current_lesson_number}`}
                         className="flex-1"
-                        onClick={() => router.push(`/course/${course.id}`)}
                       >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          // TODO: Add edit functionality
-                        }}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          // TODO: Add share functionality
-                        }}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
+                        <Button className="w-full" size="sm">
+                          {course.enrollment.progress_percentage === 100 ? (
+                            <>
+                              <Award className="h-4 w-4 mr-2" />
+                              Review Course
+                            </>
+                          ) : course.enrollment.progress_percentage > 0 ? (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Continue Learning
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Start Learning
+                            </>
+                          )}
+                        </Button>
+                      </Link>
+                      <Link href={`/course/${course.id}`}>
+                        <Button variant="outline" size="sm">
+                          <BookOpen className="h-4 w-4" />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {createdCourses.length === 0 ? (
+            <Card className="p-8 text-center">
+              <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No courses created yet</h3>
+              <p className="text-gray-600 mb-4">
+                Share your knowledge by creating and publishing your own courses.
+              </p>
+              <Link href="/generate-course">
+                <Button>
+                  <Award className="h-4 w-4 mr-2" />
+                  Create Course
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {createdCourses.map((course) => (
+                <Card key={course.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="space-y-4">
+                    {/* Course Header */}
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-semibold text-gray-900 line-clamp-2">{course.title}</h3>
+                        <Badge className={course.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {course.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">{course.description}</p>
+                    </div>
+
+                    {/* Course Info */}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>{course.target_audience}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{course.total_duration}</span>
+                      </div>
+                    </div>
+
+                    {/* Creation Date */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Calendar className="h-3 w-3" />
+                      <span>Created {formatDate(course.created_at)}</span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <Link href={`/course/${course.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full" size="sm">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          View Course
+                        </Button>
+                      </Link>
+                      {course.is_published && (
+                        <Link href={`/course/${course.id}/study`}>
+                          <Button size="sm">
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 } 

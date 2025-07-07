@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { FullPageSpinner } from '@/components/ui/loading-spinner'
 import { Breadcrumbs } from '@/components/layout/breadcrumbs'
-import UserCourses from '@/components/dashboard/user-courses'
+import { UserCourses } from '@/components/dashboard/user-courses'
 import { 
   User, 
   Trophy, 

@@ -24,8 +24,10 @@ import {
   ArrowLeft,
   Target,
   Award,
-  Brain
+  Brain,
+  Play
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function CoursePage() {
   const params = useParams()
@@ -449,6 +451,22 @@ export default function CoursePage() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+          <div className="flex items-center justify-center gap-4">
+            <Link href={`/course/${courseId}/study`}>
+              <Button size="lg" className="px-8 py-3">
+                <Play className="h-5 w-5 mr-2" />
+                Start Learning
+              </Button>
+            </Link>
+            <Button variant="outline" size="lg" onClick={() => window.history.back()}>
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
       </div>
     </div>
