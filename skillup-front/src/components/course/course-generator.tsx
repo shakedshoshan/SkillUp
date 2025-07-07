@@ -1,23 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-
-interface CourseGenerationRequest {
-  course_topic: string;
-  search_web: boolean;
-  user_id: string;
-}
-
-interface StreamMessage {
-  type: 'log' | 'progress' | 'success' | 'error' | 'course_generated';
-  message: string;
-  data?: any;
-  timestamp: string;
-}
+import { useCourseGeneration } from '@/hooks/use-course-generation';
+import type { StreamMessage } from '@/lib/services/course-generation.service';
 
 interface CourseGeneratorProps {
   userId: string;
@@ -25,142 +13,34 @@ interface CourseGeneratorProps {
 }
 
 export function CourseGenerator({ userId, onCourseGenerated }: CourseGeneratorProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
   const [courseTopic, setCourseTopic] = useState('');
   const [searchWeb, setSearchWeb] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [logs, setLogs] = useState<StreamMessage[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const {
+    isGenerating,
+    sessionId,
+    logs,
+    startGeneration,
+    stopGeneration,
+    clearLogs
+  } = useCourseGeneration({
+    userId,
+    onCourseGenerated
+  });
 
   // Auto-scroll to bottom of logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // Setup WebSocket connection when session starts
-  useEffect(() => {
-    if (sessionId && !socket) {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-      const newSocket = io(backendUrl, {
-        transports: ['websocket', 'polling']
-      });
-
-      newSocket.on('connect', () => {
-        console.log('Connected to WebSocket');
-        newSocket.emit('join_session', sessionId);
-      });
-
-      newSocket.on('course_generation_update', (message: StreamMessage) => {
-        setLogs(prev => [...prev, message]);
-      });
-
-      newSocket.on('course_generation_complete', (result: any) => {
-        setIsGenerating(false);
-        if (result.success) {
-          setLogs(prev => [...prev, {
-            type: 'success',
-            message: `✅ Course generation completed! Course ID: ${result.courseId}`,
-            timestamp: new Date().toISOString()
-          }]);
-          onCourseGenerated?.(result.courseId, result.course);
-        } else {
-          setLogs(prev => [...prev, {
-            type: 'error',
-            message: `❌ Course generation failed: ${result.error}`,
-            timestamp: new Date().toISOString()
-          }]);
-        }
-      });
-
-      newSocket.on('session_status', (status: any) => {
-        console.log('Session status:', status);
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('Disconnected from WebSocket');
-      });
-
-      setSocket(newSocket);
-    }
-
-    return () => {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
-    };
-  }, [sessionId, socket, onCourseGenerated]);
-
-  const startGeneration = async () => {
-    if (!courseTopic.trim()) {
-      alert('Please enter a course topic');
-      return;
-    }
-
-    setIsGenerating(true);
-    setLogs([]);
-    setSessionId(null);
-
-    const request: CourseGenerationRequest = {
-      course_topic: courseTopic.trim(),
-      search_web: searchWeb,
-      user_id: userId
-    };
-
+  const handleStartGeneration = async () => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-      const response = await fetch(`${backendUrl}/api/v1/course-generation/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSessionId(result.sessionId);
-        setLogs([{
-          type: 'log',
-          message: `🚀 Course generation started! Session: ${result.sessionId}`,
-          timestamp: new Date().toISOString()
-        }]);
-      } else {
-        setIsGenerating(false);
-        setLogs([{
-          type: 'error',
-          message: `❌ Failed to start generation: ${result.error}`,
-          timestamp: new Date().toISOString()
-        }]);
-      }
+      await startGeneration(courseTopic, searchWeb);
     } catch (error) {
-      setIsGenerating(false);
-      setLogs([{
-        type: 'error',
-        message: `❌ Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        timestamp: new Date().toISOString()
-      }]);
+      console.error('Failed to start generation:', error);
+      // Error handling is already done in the hook
     }
-  };
-
-  const stopGeneration = () => {
-    if (socket) {
-      socket.disconnect();
-      setSocket(null);
-    }
-    setIsGenerating(false);
-    setSessionId(null);
-    setLogs(prev => [...prev, {
-      type: 'log',
-      message: '🛑 Generation stopped by user',
-      timestamp: new Date().toISOString()
-    }]);
-  };
-
-  const clearLogs = () => {
-    setLogs([]);
   };
 
   const getMessageColor = (type: string): string => {
@@ -210,7 +90,7 @@ export function CourseGenerator({ userId, onCourseGenerated }: CourseGeneratorPr
 
           <div className="flex space-x-4">
             <Button 
-              onClick={startGeneration}
+              onClick={handleStartGeneration}
               disabled={isGenerating || !courseTopic.trim()}
               className="flex items-center space-x-2"
             >

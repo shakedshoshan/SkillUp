@@ -79,7 +79,7 @@ interface CourseResponse {
 export class CourseService {
   private static readonly API_BASE_URL = process.env.NODE_ENV === 'production' 
     ? 'https://skillup-backend.vercel.app' 
-    : 'http://localhost:5000';
+    : process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
   static async getCoursesByUser(userId: string): Promise<CourseResponse> {
     try {

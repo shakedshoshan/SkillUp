@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CourseService, type Course } from '@/lib/services/course.service'
+import { CourseService, type Course } from '@/lib/services'
 import { useAuth } from '../../hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'

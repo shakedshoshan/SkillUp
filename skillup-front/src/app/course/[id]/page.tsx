@@ -13,7 +13,7 @@ import {
   type QuizQuestion, 
   type QuizOption,
   CourseService
-} from '@/lib/services/course.service'
+} from '@/lib/services'
 import { 
   BookOpen, 
   Clock, 
