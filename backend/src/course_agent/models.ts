@@ -69,6 +69,14 @@ export const WorkflowStateSchema = z.object({
   web_search_enabled: z.boolean().optional(),
 });
 
+// JSON Activation Schema for file-based course generation
+export const CourseActivationSchema = z.object({
+  course_topic: z.string().min(1, "Course topic is required"),
+  search_web: z.boolean().default(false),
+  user_id: z.string().uuid("Invalid UUID format for user_id"),
+  output_file: z.string().optional(), // Optional output file path
+});
+
 // TypeScript Types (inferred from schemas)
 export type QuizOption = z.infer<typeof QuizOptionSchema>;
 export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
@@ -77,4 +85,5 @@ export type LessonContent = z.infer<typeof LessonContentSchema>;
 export type CourseLesson = z.infer<typeof CourseLessonSchema>;
 export type CoursePart = z.infer<typeof CoursePartSchema>;
 export type CourseStructure = z.infer<typeof CourseStructureSchema>;
-export type WorkflowState = z.infer<typeof WorkflowStateSchema>; 
+export type WorkflowState = z.infer<typeof WorkflowStateSchema>;
+export type CourseActivation = z.infer<typeof CourseActivationSchema>; 

@@ -6,7 +6,7 @@ import { CourseService, type Course } from '@/lib/services/course.service'
 import { useAuth } from '../../hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { BookOpen, Clock, DollarSign, Plus, Edit, Eye } from 'lucide-react'
+import { BookOpen, Clock, DollarSign, Plus, Edit, Eye, Link } from 'lucide-react'
 
 interface UserCoursesProps {
   className?: string
@@ -108,10 +108,10 @@ export default function UserCourses({ className }: UserCoursesProps) {
     <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-medium text-gray-900">Your Projects</h3>
-        <Button>
+        <Link href="/generate-course" className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-md">
           <Plus className="h-4 w-4 mr-2" />
           Create Course
-        </Button>
+        </Link>
       </div>
 
       {courses.length === 0 ? (

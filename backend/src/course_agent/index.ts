@@ -1,5 +1,7 @@
 // Export all main classes and types
 export { CourseBuilderAgent } from './course-builder-agent';
+export { JsonCourseBuilderAgent } from './course-builder-json';
+export { StreamingCourseBuilderAgent } from './course-builder-stream';
 export { CourseBuilderWorkflow } from './workflow';
 export { CourseFormatter } from './course-formatter';
 export { KnowledgeService } from './knowledge-service';
@@ -13,9 +15,11 @@ export {
   CoursePart,
   CourseLesson,
   LessonContent,
+  CourseActivation,
   WorkflowStateSchema,
   CourseStructureSchema,
   CoursePartSchema,
   CourseLessonSchema,
-  LessonContentSchema
+  LessonContentSchema,
+  CourseActivationSchema
 } from './models'; 
