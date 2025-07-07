@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { CourseGenerator } from '@/components/course/course-generator';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { FullPageSpinner } from '@/components/ui/loading-spinner';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
+import { Sparkles, Target, Zap, BookOpen, ArrowRight, CheckCircle } from 'lucide-react';
 
 export default function GenerateCoursePage() {
   const { user, loading } = useAuth();
@@ -11,14 +17,7 @@ export default function GenerateCoursePage() {
   const [generatedCourseId, setGeneratedCourseId] = useState<string | null>(null);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <FullPageSpinner text="Loading course generator..." />;
   }
 
   if (!user) {
@@ -29,100 +28,152 @@ export default function GenerateCoursePage() {
   const handleCourseGenerated = (courseId: string, courseData: any) => {
     console.log('Course generated:', { courseId, courseData });
     setGeneratedCourseId(courseId);
-    
-    // Show success message and offer to view course
-    if (confirm(`Course generated successfully! Would you like to view the course?`)) {
-      router.push(`/course/${courseId}`);
-    }
   };
 
+  const breadcrumbItems = [
+    { label: 'Create Course', isActive: true }
+  ];
+
+  const features = [
+    {
+      icon: Sparkles,
+      title: 'AI-Powered Generation',
+      description: 'Advanced AI creates structured course content tailored to your topic'
+    },
+    {
+      icon: Target,
+      title: 'Real-time Progress',
+      description: 'Watch your course being built with live streaming feedback'
+    },
+    {
+      icon: Zap,
+      title: 'Web Search Integration',
+      description: 'Include current information with optional web search capability'
+    },
+    {
+      icon: BookOpen,
+      title: 'Complete Content',
+      description: 'Get lessons, examples, quizzes, and assessments automatically'
+    }
+  ];
+
+  const steps = [
+    { number: 1, title: 'Enter Topic', description: 'Describe what you want to teach' },
+    { number: 2, title: 'AI Generation', description: 'Watch real-time course creation' },
+    { number: 3, title: 'Review & Publish', description: 'Edit and share your course' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto py-8">
-        <div className="mb-8 text-center">
+    <div className="bg-gray-50 pt-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={breadcrumbItems} />
+
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Badge variant="info" className="px-4 py-2">
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI-Powered Course Creation
+            </Badge>
+          </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            AI Course Generator
+            Create Your Course with AI
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Create comprehensive courses on any topic using our AI-powered course builder. 
-            Watch the generation process in real-time and get detailed course content with lessons, 
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Build comprehensive courses on any topic using our advanced AI course builder. 
+            Watch the generation process in real-time and get detailed content with lessons, 
             examples, and quizzes.
           </p>
         </div>
 
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Card key={index} variant="default" className="text-center">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <Icon className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-600">{feature.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Course Generator */}
         <CourseGenerator 
           userId={user.id}
           onCourseGenerated={handleCourseGenerated}
         />
 
+        {/* Success Message */}
         {generatedCourseId && (
-          <div className="mt-8 text-center">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto">
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
+          <Card variant="elevated" className="border-green-200 bg-green-50">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-lg font-semibold text-green-800 mb-2">
-                Course Generated Successfully!
+              <h3 className="text-xl font-semibold text-green-800 mb-2">
+                🎉 Course Generated Successfully!
               </h3>
-              <p className="text-green-600 mb-4">
-                Your course has been saved with ID: {generatedCourseId}
+              <p className="text-green-700 mb-6">
+                Your course has been created and is ready for review. You can now view, edit, or publish it.
               </p>
-              <div className="space-y-2">
-                <button
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
                   onClick={() => router.push(`/course/${generatedCourseId}`)}
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  className="bg-green-600 hover:bg-green-700"
                 >
+                  <BookOpen className="h-4 w-4 mr-2" />
                   View Course
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => router.push('/dashboard')}
-                  className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
                 >
                   Go to Dashboard
-                </button>
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        <div className="mt-12 max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold mb-4">How It Works</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-xl font-bold text-blue-600">1</span>
+        {/* How It Works */}
+        <Card variant="default">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">How It Works</CardTitle>
+            <CardDescription className="text-center">
+              Simple 3-step process to create professional courses
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-8">
+              {steps.map((step, index) => (
+                <div key={index} className="text-center relative">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <span className="text-2xl font-bold text-white">{step.number}</span>
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
+                  <p className="text-gray-600 text-sm">{step.description}</p>
+                  
+                  {/* Arrow for desktop */}
+                  {index < steps.length - 1 && (
+                    <div className="hidden md:block absolute top-8 left-full w-full">
+                      <ArrowRight className="h-6 w-6 text-gray-400 mx-auto" />
+                    </div>
+                  )}
                 </div>
-                <h3 className="font-semibold mb-2">Enter Topic</h3>
-                <p className="text-gray-600 text-sm">
-                  Provide a course topic and choose whether to include web search for current information.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-xl font-bold text-green-600">2</span>
-                </div>
-                <h3 className="font-semibold mb-2">AI Generation</h3>
-                <p className="text-gray-600 text-sm">
-                  Watch as our AI creates structured course content with lessons, examples, and quizzes in real-time.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-xl font-bold text-purple-600">3</span>
-                </div>
-                <h3 className="font-semibold mb-2">Ready to Learn</h3>
-                <p className="text-gray-600 text-sm">
-                  Your complete course is saved and ready for learners with all content and assessments.
-                </p>
-              </div>
+              ))}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
