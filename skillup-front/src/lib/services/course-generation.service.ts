@@ -13,7 +13,7 @@ interface CourseGenerationResponse {
 interface StreamMessage {
   type: 'log' | 'progress' | 'success' | 'error' | 'course_generated';
   message: string;
-  data?: any;
+  data?: unknown;
   timestamp: string;
 }
 

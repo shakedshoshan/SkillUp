@@ -18,7 +18,6 @@ import {
   Award, 
   Play, 
   CheckCircle,
-  TrendingUp,
   Calendar,
   Target
 } from 'lucide-react'

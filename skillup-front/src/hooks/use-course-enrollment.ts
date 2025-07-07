@@ -69,6 +69,7 @@ export function useCourseEnrollment({
               completions[lessonId] = result.data
             }
           } catch (err) {
+            console.error('Error fetching lesson completions:', err)
             // Lesson not completed, continue
           }
         })
@@ -138,6 +139,7 @@ export function useCourseEnrollment({
     if (autoFetch && userId && courseId) {
       fetchEnrollment()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, courseId, autoFetch])
 
   return {

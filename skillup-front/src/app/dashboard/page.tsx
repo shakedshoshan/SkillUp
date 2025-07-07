@@ -138,7 +138,7 @@ export default function DashboardPage() {
                   Welcome back, {userProfile?.full_name || user.email?.split('@')[0]}!
                 </h1>
                 <p className="text-blue-100 mt-1">
-                  Ready to continue your learning journey? Let's create something amazing today.
+                  Ready to continue your learning journey? Let&apos;s create something amazing today.
                 </p>
               </div>
               <div className="hidden sm:flex items-center space-x-2">

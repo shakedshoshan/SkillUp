@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { 
   type Lesson, 
-  type Quiz, 
-  type QuizQuestion, 
   type QuizOption,
   type QuizSubmission,
   type QuizResult,
@@ -24,7 +22,6 @@ import {
 interface QuizViewerProps {
   lesson: Lesson
   userId: string
-  isLessonCompleted: boolean // Renamed for clarity
   onQuizComplete: (score: number, total: number) => void
 }
 
@@ -32,7 +29,7 @@ interface SelectedAnswers {
   [questionId: string]: string
 }
 
-export function QuizViewer({ lesson, userId, isLessonCompleted, onQuizComplete }: QuizViewerProps) {
+export function QuizViewer({ lesson, userId, onQuizComplete }: QuizViewerProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<SelectedAnswers>({})
   const [submitted, setSubmitted] = useState(false) // Always start fresh
   const [results, setResults] = useState<QuizResult | null>(null)
@@ -274,7 +271,7 @@ export function QuizViewer({ lesson, userId, isLessonCompleted, onQuizComplete }
 
       {/* Questions */}
       <div className="space-y-6">
-        {quiz.questions.map((question, questionIndex) => {
+        {quiz.questions.map((question) => {
           const questionResult = getQuestionResult(question.id)
           
           return (

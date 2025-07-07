@@ -21,10 +21,7 @@ import {
   ArrowRight,
   Play,
   Users,
-  Target,
   Award,
-  Brain,
-  FileText
 } from 'lucide-react'
 import Link from 'next/link'
 import { LessonViewer } from '../../../../components/course/lesson-viewer'
@@ -434,7 +431,7 @@ export default function CourseStudyPage() {
                           lesson={currentLessonData.lesson}
                           userId={user?.id || ''}
                           isLessonCompleted={!!lessonCompletions[currentLessonData.lesson.id]}
-                          onQuizComplete={(score, total) => {
+                          onQuizComplete={() => {
                             handleLessonComplete(currentLessonData.lesson.id)
                           }}
                         />

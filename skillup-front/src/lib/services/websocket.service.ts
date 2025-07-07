@@ -1,12 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 import { StreamMessage } from './course-generation.service';
 
-interface WebSocketCallbacks {
+export interface WebSocketCallbacks {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onUpdate?: (message: StreamMessage) => void;
-  onComplete?: (result: any) => void;
-  onStatusChange?: (status: any) => void;
+  onComplete?: (result: unknown) => void;
+  onStatusChange?: (status: unknown) => void;
 }
 
 export class WebSocketService {
@@ -45,11 +45,11 @@ export class WebSocketService {
       this.callbacks.onUpdate?.(message);
     });
 
-    this.socket.on('course_generation_complete', (result: any) => {
+    this.socket.on('course_generation_complete', (result: unknown) => {
       this.callbacks.onComplete?.(result);
     });
 
-    this.socket.on('session_status', (status: any) => {
+    this.socket.on('session_status', (status: unknown) => {
       console.log('Session status:', status);
       this.callbacks.onStatusChange?.(status);
     });
@@ -85,4 +85,4 @@ export class WebSocketService {
   }
 }
 
-export type { WebSocketCallbacks }; 
+// export type { WebSocketCallbacks }; 

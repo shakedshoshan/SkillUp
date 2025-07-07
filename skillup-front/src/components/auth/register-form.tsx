@@ -52,6 +52,7 @@ export function RegisterForm() {
 
       setSuccess(true)
     } catch (err) {
+      console.error(err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -65,7 +66,7 @@ export function RegisterForm() {
           <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
           <h1 className="mt-4 text-2xl font-bold text-gray-900">Check your email</h1>
           <p className="mt-2 text-gray-600">
-            We've sent you a confirmation link. Please check your email and click the link to complete your registration.
+            We&apos;ve sent you a confirmation link. Please check your email and click the link to complete your registration.
           </p>
         </div>
         <Button

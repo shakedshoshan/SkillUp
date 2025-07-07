@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { 
-  type Lesson, 
-  type LessonContent 
+  type Lesson
 } from '../../lib/services/course.service'
 import { 
   Clock, 

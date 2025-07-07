@@ -1,12 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import React, { useState } from 'react'
 import { 
   type Course, 
   type CoursePart, 
   type Lesson, 
-  type CourseEnrollment,
   type LessonCompletion
 } from '../../lib/services/course.service'
 import { 
@@ -15,8 +13,6 @@ import {
   CheckCircle, 
   Circle, 
   Clock, 
-  Target,
-  BookOpen,
   FileText,
   Brain,
   Play,
@@ -29,7 +25,6 @@ interface CourseNavigationProps {
   currentLessonNumber: number
   lessonCompletions: Record<string, LessonCompletion>
   onLessonSelect: (partNumber: number, lessonNumber: number) => void
-  enrollment: CourseEnrollment
 }
 
 export function CourseNavigation({
@@ -37,8 +32,7 @@ export function CourseNavigation({
   currentPartNumber,
   currentLessonNumber,
   lessonCompletions,
-  onLessonSelect,
-  enrollment
+  onLessonSelect
 }: CourseNavigationProps) {
   const [expandedParts, setExpandedParts] = useState<Set<number>>(
     new Set([currentPartNumber])
@@ -284,7 +278,7 @@ export function CourseNavigation({
             Congratulations!
           </div>
           <div className="text-xs text-green-700">
-            You've completed this course
+            You&apos;ve completed this course
           </div>
         </div>
       )}

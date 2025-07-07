@@ -6,12 +6,6 @@ import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { 
   type Course, 
-  type CoursePart, 
-  type Lesson, 
-  type LessonContent, 
-  type Quiz, 
-  type QuizQuestion, 
-  type QuizOption,
   CourseService
 } from '@/lib/services'
 import { 

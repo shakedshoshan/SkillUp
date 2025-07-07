@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useCourseGeneration } from '@/hooks/use-course-generation';
-import type { StreamMessage } from '@/lib/services/course-generation.service';
 
 interface CourseGeneratorProps {
   userId: string;
-  onCourseGenerated?: (courseId: string, courseData: any) => void;
+  onCourseGenerated?: (courseId: string, courseData: unknown) => void;
 }
 
 export function CourseGenerator({ userId, onCourseGenerated }: CourseGeneratorProps) {

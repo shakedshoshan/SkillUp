@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { CourseGenerationService, type CourseGenerationRequest, type StreamMessage } from '@/lib/services/course-generation.service';
 import { WebSocketService, type WebSocketCallbacks } from '@/lib/services/websocket.service';
 
 interface UseCourseGenerationProps {
   userId: string;
-  onCourseGenerated?: (courseId: string, courseData: any) => void;
+  onCourseGenerated?: (courseId: string, courseData: unknown) => void;
 }
 
 interface UseCourseGenerationReturn {
@@ -27,7 +27,7 @@ export function useCourseGeneration({
   const webSocketService = useRef<WebSocketService>(new WebSocketService());
 
   // WebSocket callbacks
-  const webSocketCallbacks: WebSocketCallbacks = {
+  const webSocketCallbacks: WebSocketCallbacks = useMemo(() => ({
     onConnect: () => {
       console.log('WebSocket connected');
     },
@@ -37,41 +37,46 @@ export function useCourseGeneration({
     onUpdate: (message: StreamMessage) => {
       setLogs(prev => [...prev, message]);
     },
-    onComplete: (result: any) => {
+    onComplete: (result: unknown) => {
       setIsGenerating(false);
-      if (result.success) {
-        const successMessage: StreamMessage = {
-          type: 'success',
-          message: `✅ Course generation completed! Course ID: ${result.courseId}`,
-          timestamp: new Date().toISOString()
-        };
-        setLogs(prev => [...prev, successMessage]);
-        onCourseGenerated?.(result.courseId, result.course);
-      } else {
-        const errorMessage: StreamMessage = {
-          type: 'error',
-          message: `❌ Course generation failed: ${result.error}`,
-          timestamp: new Date().toISOString()
-        };
-        setLogs(prev => [...prev, errorMessage]);
+      if (result && typeof result === 'object' && 'success' in result) {
+        const typedResult = result as { success: boolean; courseId?: string; course?: unknown; error?: string };
+        if (typedResult.success) {
+          const successMessage: StreamMessage = {
+            type: 'success',
+            message: `✅ Course generation completed! Course ID: ${typedResult.courseId}`,
+            timestamp: new Date().toISOString()
+          };
+          setLogs(prev => [...prev, successMessage]);
+          onCourseGenerated?.(typedResult.courseId!, typedResult.course);
+        } else {
+          const errorMessage: StreamMessage = {
+            type: 'error',
+            message: `❌ Course generation failed: ${typedResult.error}`,
+            timestamp: new Date().toISOString()
+          };
+          setLogs(prev => [...prev, errorMessage]);
+        }
       }
     },
-    onStatusChange: (status: any) => {
+    onStatusChange: (status: unknown) => {
       console.log('Session status changed:', status);
     }
-  };
+  }), [onCourseGenerated]);
 
   // Connect to WebSocket when sessionId changes
   useEffect(() => {
     if (sessionId) {
       const backendUrl = CourseGenerationService.getBackendUrl();
-      webSocketService.current.connect(backendUrl, sessionId, webSocketCallbacks);
+      const wsService = webSocketService.current;
+      wsService.connect(backendUrl, sessionId, webSocketCallbacks);
     }
 
     return () => {
-      webSocketService.current.disconnect();
+      const wsService = webSocketService.current;
+      wsService.disconnect();
     };
-  }, [sessionId]);
+  }, [sessionId, webSocketCallbacks]);
 
   // Start course generation
   const startGeneration = useCallback(async (courseTopic: string, searchWeb: boolean) => {

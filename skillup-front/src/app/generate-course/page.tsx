@@ -25,7 +25,7 @@ export default function GenerateCoursePage() {
     return null;
   }
 
-  const handleCourseGenerated = (courseId: string, courseData: any) => {
+  const handleCourseGenerated = (courseId: string, courseData: unknown) => {
     console.log('Course generated:', { courseId, courseData });
     setGeneratedCourseId(courseId);
   };
