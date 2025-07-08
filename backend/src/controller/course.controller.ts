@@ -1,7 +1,41 @@
 import { Request, Response } from 'express';
 import { dbConfig } from '../config/db.config';
+import { cacheService } from '../services/cache.service';
+import { envConfig } from '../config/env.config';
 
 export class CourseController {
+  // Cache utility methods
+  private static async invalidateCourseCache(courseId: string): Promise<void> {
+    try {
+      // Clear specific course cache
+      await cacheService.del(`course:${courseId}:full`, {
+        keyPrefix: 'skillup:courses:'
+      });
+      
+      // Clear related cache patterns
+      await cacheService.clearByPattern(`course:${courseId}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+      
+      console.log(`Cache invalidated for course ${courseId}`);
+    } catch (error) {
+      console.error(`Failed to invalidate cache for course ${courseId}:`, error);
+    }
+  }
+
+  private static async invalidateAllCoursesCache(): Promise<void> {
+    try {
+      // Clear all courses list cache
+      await cacheService.clearByPattern('courses:*', {
+        keyPrefix: 'skillup:'
+      });
+      
+      console.log('All courses cache invalidated');
+    } catch (error) {
+      console.error('Failed to invalidate all courses cache:', error);
+    }
+  }
+
   // Get course by ID with all nested data
   static async getCourseById(req: Request, res: Response): Promise<void> {
     try {
@@ -14,6 +48,27 @@ export class CourseController {
         });
         return;
       }
+
+      // Cache key for the course
+      const cacheKey = `course:${id}:full`;
+      
+      // Try to get from cache first
+      const cachedCourse = await cacheService.get(cacheKey, {
+        ttl: envConfig.redis.courseTTL, // Configurable course cache duration
+        keyPrefix: 'skillup:courses:'
+      });
+
+      if (cachedCourse) {
+        console.log(`Cache hit for course ${id}`);
+        res.json({
+          success: true,
+          data: cachedCourse,
+          cached: true
+        });
+        return;
+      }
+
+      console.log(`Cache miss for course ${id}, fetching from database`);
 
       const supabase = dbConfig.getClient();
       
@@ -163,9 +218,18 @@ export class CourseController {
         courseWithParts.parts.push(partWithLessons);
       }
 
+      // Cache the complete course data
+      await cacheService.set(cacheKey, courseWithParts, {
+        ttl: envConfig.redis.courseTTL, // Configurable course cache duration
+        keyPrefix: 'skillup:courses:'
+      });
+
+      console.log(`Course ${id} cached successfully`);
+
       res.json({
         success: true,
-        data: courseWithParts
+        data: courseWithParts,
+        cached: false
       });
     } catch (error) {
       res.status(500).json({
@@ -179,6 +243,26 @@ export class CourseController {
   // Get all courses (basic info only)
   static async getAllCourses(req: Request, res: Response): Promise<void> {
     try {
+      const cacheKey = 'courses:all';
+      
+      // Try to get from cache first
+      const cachedCourses = await cacheService.get(cacheKey, {
+        ttl: 1800, // 30 minutes cache for list data
+      });
+
+      if (cachedCourses) {
+        console.log('Cache hit for all courses');
+        res.json({
+          success: true,
+          data: cachedCourses,
+          count: cachedCourses.length,
+          cached: true
+        });
+        return;
+      }
+
+      console.log('Cache miss for all courses, fetching from database');
+
       const supabase = dbConfig.getClient();
       
       const { data, error } = await supabase
@@ -195,10 +279,20 @@ export class CourseController {
         return;
       }
 
+      const courses = data || [];
+
+      // Cache the courses list
+      await cacheService.set(cacheKey, courses, {
+        ttl: 1800, // 30 minutes cache
+      });
+
+      console.log('All courses cached successfully');
+
       res.json({
         success: true,
-        data: data || [],
-        count: data?.length || 0
+        data: courses,
+        count: courses.length,
+        cached: false
       });
     } catch (error) {
       res.status(500).json({
@@ -497,6 +591,15 @@ export class CourseController {
           message: error.message
         });
         return;
+      }
+
+      // Invalidate user's enrolled courses cache when progress is updated
+      try {
+        await cacheService.clearByPattern(`user:${user_id}:enrolled-courses`, {
+          keyPrefix: 'skillup:'
+        });
+      } catch (cacheError) {
+        console.warn('Failed to invalidate user enrolled courses cache:', cacheError);
       }
 
       res.json({

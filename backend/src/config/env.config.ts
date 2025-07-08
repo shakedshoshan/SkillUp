@@ -25,5 +25,13 @@ export const envConfig = {
     url: process.env.DATABASE_URL,
     // Connection pooling configuration
     pooled: process.env.DATABASE_POOLED_URL || process.env.DATABASE_URL,
+  },
+
+  // Redis Cloud Configuration
+  redis: {
+    url: process.env.REDIS_URL, // Redis Cloud provides this
+    keyPrefix: process.env.REDIS_KEY_PREFIX || 'skillup:',
+    defaultTTL: parseInt(process.env.REDIS_DEFAULT_TTL || '3600'), // 1 hour default
+    courseTTL: parseInt(process.env.REDIS_COURSE_TTL || '3600'), // Course-specific TTL
   }
 }; 

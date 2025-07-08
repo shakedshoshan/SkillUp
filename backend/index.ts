@@ -4,6 +4,8 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { envConfig } from './src/config/env.config';
 import { dbConfig } from './src/config/db.config';
+import { redisConfig } from './src/config/redis.config';
+import { cacheService } from './src/services/cache.service';
 import userRouter from './src/route/user.route';
 import courseRouter from './src/route/course.route';
 import lessonRouter from './src/route/lesson.route';
@@ -119,6 +121,60 @@ app.get('/health/db', async (req: Request, res: Response) => {
   }
 });
 
+// Redis health check
+app.get('/health/redis', async (req: Request, res: Response) => {
+  try {
+    const stats = await cacheService.getStats();
+    
+    res.json({
+      status: stats.connected ? 'healthy' : 'disconnected',
+      redis: stats.connected ? 'connected' : 'disconnected',
+      stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      redis: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Full health check (database + redis)
+app.get('/health', async (req: Request, res: Response) => {
+  try {
+    // Check database
+    const supabase = dbConfig.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('count(*)')
+      .limit(1);
+
+    const dbHealthy = !error || error.code === 'PGRST116';
+
+    // Check Redis
+    const redisStats = await cacheService.getStats();
+
+    res.json({
+      status: dbHealthy && redisStats.connected ? 'healthy' : 'degraded',
+      services: {
+        database: dbHealthy ? 'connected' : 'disconnected',
+        redis: redisStats.connected ? 'connected' : 'disconnected'
+      },
+      redis: redisStats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // API v1 routes
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/courses', courseRouter);
@@ -179,15 +235,64 @@ async function startServer() {
     await dbConfig.connect();
     console.log('✅ Database connection initialized');
 
+    // Initialize Redis connection
+    try {
+      await redisConfig.connect();
+      console.log('✅ Redis connection initialized');
+    } catch (redisError) {
+      console.warn('⚠️  Redis connection failed, continuing without cache:', redisError);
+      // Continue without Redis - the app will work without caching
+    }
+
     // Set up WebSocket handlers
     setupCourseGenerationWebSocket(io);
     console.log('🔌 WebSocket handlers initialized');
+
+    // Set up graceful shutdown
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`\n📴 Received ${signal}. Starting graceful shutdown...`);
+      
+      // Close server first
+             server.close(async () => {
+         try {
+           // Note: Supabase uses HTTP requests, no explicit disconnect needed
+           console.log('✅ Database connections closed');
+           
+           // Close Redis connections
+           await redisConfig.gracefulShutdown();
+           console.log('✅ Redis connections closed');
+           
+           console.log('👋 Graceful shutdown completed');
+           process.exit(0);
+         } catch (error) {
+           console.error('❌ Error during graceful shutdown:', error);
+           process.exit(1);
+         }
+       });
+    };
+
+    // Handle process termination
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('❌ Uncaught Exception:', error);
+      gracefulShutdown('UNCAUGHT_EXCEPTION');
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+      gracefulShutdown('UNHANDLED_REJECTION');
+    });
 
     // Start server
     server.listen(PORT, () => {
       console.log(`🚀 Server running in ${envConfig.nodeEnv} mode on port ${PORT}`);
       console.log(`🌐 Frontend URL: ${envConfig.frontendUrl}`);
-      console.log(`📍 Health check: http://localhost:${PORT}/health/db`);
+      console.log(`📍 Health check: http://localhost:${PORT}/health`);
+      console.log(`📊 Database health: http://localhost:${PORT}/health/db`);
+      console.log(`🔴 Redis health: http://localhost:${PORT}/health/redis`);
       console.log(`🔗 API Info: http://localhost:${PORT}/api/v1`);
       console.log(`🔌 WebSocket: ws://localhost:${PORT}/socket.io/`);
       console.log(`🤖 Course Generation: POST /api/v1/course-generation/generate`);
