@@ -107,9 +107,9 @@ fi
 # Auto-detect compose file if not specified
 if [[ -z "$COMPOSE_FILE" ]]; then
     if [[ "$ENVIRONMENT" == "dev" ]]; then
-        COMPOSE_FILE="docker-compose.dev.yml"
+        COMPOSE_FILE="docker/docker-compose.dev.yml"
     else
-        COMPOSE_FILE="docker-compose.prod.yml"
+        COMPOSE_FILE="docker/docker-compose.prod.yml"
     fi
 fi
 
@@ -161,11 +161,26 @@ start_services() {
     
     # Wait for services to be ready
     echo -e "${YELLOW}⏳ Waiting for services to be ready...${NC}"
-    sleep 5
+    sleep 10
     
     # Check health
     echo -e "${YELLOW}🔍 Checking service health...${NC}"
     docker-compose -f "$COMPOSE_FILE" ps
+    
+    # Check specific health endpoints
+    echo -e "${YELLOW}🔍 Checking Redis health...${NC}"
+    if curl -s http://localhost:${PORT:-5000}/health/redis > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Redis is healthy${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Redis health check failed (may still be starting)${NC}"
+    fi
+    
+    echo -e "${YELLOW}🔍 Checking database health...${NC}"
+    if curl -s http://localhost:${PORT:-5000}/health/db > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Database is healthy${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Database health check failed (may still be starting)${NC}"
+    fi
     
     echo -e "${GREEN}✅ Services started successfully${NC}"
 }
@@ -208,8 +223,17 @@ main() {
     echo -e "${YELLOW}Useful commands:${NC}"
     echo -e "  • Check status: ${GREEN}docker-compose -f $COMPOSE_FILE ps${NC}"
     echo -e "  • View logs: ${GREEN}docker-compose -f $COMPOSE_FILE logs${NC}"
+    echo -e "  • View backend logs: ${GREEN}docker-compose -f $COMPOSE_FILE logs skillup-backend${NC}"
+    echo -e "  • View Redis logs: ${GREEN}docker-compose -f $COMPOSE_FILE logs redis${NC}"
     echo -e "  • Stop services: ${GREEN}docker-compose -f $COMPOSE_FILE down${NC}"
-    echo -e "  • Health check: ${GREEN}curl http://localhost:${PORT:-5000}/health/db${NC}"
+    echo -e "  • Health checks:"
+    echo -e "    - Combined: ${GREEN}curl http://localhost:${PORT:-5000}/health${NC}"
+    echo -e "    - Database: ${GREEN}curl http://localhost:${PORT:-5000}/health/db${NC}"
+    echo -e "    - Redis: ${GREEN}curl http://localhost:${PORT:-5000}/health/redis${NC}"
+    echo -e "  • Redis management:"
+    echo -e "    - Connect to Redis CLI: ${GREEN}npm run redis:cli${NC}"
+    echo -e "    - View Redis keys: ${GREEN}npm run redis:keys${NC}"
+    echo -e "    - Clear Redis cache: ${GREEN}npm run redis:clear${NC}"
     echo ""
     
     # Follow logs if requested

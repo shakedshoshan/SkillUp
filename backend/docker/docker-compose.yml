@@ -1,13 +1,35 @@
 version: '3.8'
 
 services:
+  # Redis Cache Service
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - skillup-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
   # Backend API Service
   skillup-backend:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     ports:
       - "${PORT:-5000}:5000"
+    env_file:
+      - ../.env
     environment:
       # Application Configuration
       - NODE_ENV=${NODE_ENV:-production}
@@ -24,6 +46,12 @@ services:
       
       # Optional: Database pooled connection
       - DATABASE_POOLED_URL=${DATABASE_POOLED_URL}
+      
+      # Redis Configuration
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_KEY_PREFIX=${REDIS_KEY_PREFIX:-skillup:}
+      - REDIS_DEFAULT_TTL=${REDIS_DEFAULT_TTL:-3600}
+      - REDIS_COURSE_TTL=${REDIS_COURSE_TTL:-3600}
     
     # Health check
     healthcheck:
@@ -49,6 +77,11 @@ services:
     # Networking
     networks:
       - skillup-network
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
 
 networks:
   skillup-network:
@@ -60,14 +93,28 @@ networks:
 version: '3.8'
 
 services:
+  # Redis for Development
+  redis-dev:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - skillup-network
+    restart: unless-stopped
+
   # Development Backend Service
   skillup-backend-dev:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
       target: builder
     ports:
       - "${PORT:-5000}:5000"
+    env_file:
+      - ../.env
     environment:
       - NODE_ENV=development
       - PORT=5000
@@ -77,6 +124,10 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_POOLED_URL=${DATABASE_POOLED_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis-dev:6379}
+      - REDIS_KEY_PREFIX=${REDIS_KEY_PREFIX:-skillup:dev:}
+      - REDIS_DEFAULT_TTL=${REDIS_DEFAULT_TTL:-1800}
+      - REDIS_COURSE_TTL=${REDIS_COURSE_TTL:-1800}
     
     # Mount source code for development
     volumes:
@@ -101,6 +152,11 @@ services:
     restart: unless-stopped
     networks:
       - skillup-network
+    depends_on:
+      - redis-dev
+
+volumes:
+  redis_dev_data:
 
 networks:
   skillup-network:
