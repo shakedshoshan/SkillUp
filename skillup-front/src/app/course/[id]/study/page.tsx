@@ -377,7 +377,6 @@ export default function CourseStudyPage() {
                 currentLessonNumber={currentLessonNumber}
                 lessonCompletions={lessonCompletions}
                 onLessonSelect={navigateToLesson}
-                enrollment={enrollment}
               />
             </div>
           </div>
@@ -430,7 +429,6 @@ export default function CourseStudyPage() {
                         <QuizViewer
                           lesson={currentLessonData.lesson}
                           userId={user?.id || ''}
-                          isLessonCompleted={!!lessonCompletions[currentLessonData.lesson.id]}
                           onQuizComplete={() => {
                             handleLessonComplete(currentLessonData.lesson.id)
                           }}
