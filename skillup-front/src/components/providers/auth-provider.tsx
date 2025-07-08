@@ -41,8 +41,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const fetchUserProfile = async (userId: string) => {
     try {
       const backendUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://skillup-backend.vercel.app' 
-        : 'http://localhost:5000'
+        ? process.env.NEXT_PUBLIC_BACKEND_URL_PROD
+        : process.env.NEXT_PUBLIC_BACKEND_URL
       
       const response = await fetch(`${backendUrl}/api/v1/users/${userId}`)
       if (response.ok) {

@@ -19,8 +19,8 @@ interface StreamMessage {
 
 export class CourseGenerationService {
   private static readonly API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? 'https://skillup-backend.vercel.app' 
-    : process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+    ? process.env.NEXT_PUBLIC_BACKEND_URL_PROD
+    : process.env.NEXT_PUBLIC_BACKEND_URL;
 
   /**
    * Start course generation process
@@ -50,7 +50,7 @@ export class CourseGenerationService {
    * Get backend URL for WebSocket connections
    */
   static getBackendUrl(): string {
-    return this.API_BASE_URL;
+    return process.env.NEXT_PUBLIC_BACKEND_URL_PROD || process.env.NEXT_PUBLIC_BACKEND_URL || '';
   }
 }
 
