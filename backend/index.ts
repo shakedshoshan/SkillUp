@@ -10,6 +10,8 @@ import userRouter from './src/route/user.route';
 import courseRouter from './src/route/course.route';
 import lessonRouter from './src/route/lesson.route';
 import courseGenerationRouter, { setupCourseGenerationWebSocket } from './src/route/course-generation.route';
+import { globalErrorHandler, notFound } from './src/middleware/error.middleware';
+import { requestLogger, performanceMonitor } from './src/middleware/logger.middleware';
 
 const app = express();
 const server = createServer(app);
@@ -70,6 +72,10 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
+
+// Logging and Performance Middleware
+app.use(requestLogger);
+app.use(performanceMonitor);
 
 // Middleware
 app.use(cors(corsOptions));
@@ -211,22 +217,11 @@ app.get('/api/v1', (req: Request, res: Response) => {
   });
 });
 
-// 404 handler
-app.use('*', (req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Route not found',
-    path: req.originalUrl
-  });
-});
+// 404 handler for undefined routes
+app.use('*', notFound);
 
-// Error handler
-app.use((error: Error, req: Request, res: Response, next: any) => {
-  console.error('Unhandled error:', error);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: envConfig.nodeEnv === 'development' ? error.message : 'Something went wrong'
-  });
-});
+// Global error handling middleware (must be last)
+app.use(globalErrorHandler);
 
 // Initialize and start server
 async function startServer() {

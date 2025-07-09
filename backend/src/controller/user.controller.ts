@@ -1,57 +1,34 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { dbConfig } from '../config/db.config';
-import { v4 as uuidv4 } from 'uuid';
+import { asyncHandler } from '../middleware/error.middleware';
+import { ValidationUtils } from '../utils/validation.utils';
 
 export class UserController {
 
   // Get user by ID
-  static async getUserById(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
+  static getUserById = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
 
-      if (!id) {
-        res.status(400).json({
-          success: false,
-          error: 'User ID is required'
-        });
-        return;
-      }
+    // Validate required parameter and UUID format
+    ValidationUtils.validateRequiredParam(id, 'User ID');
+    ValidationUtils.validateUUID(id, 'User ID');
 
-      const supabase = dbConfig.getClient();
-      
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', id)
-        .single();
+    const supabase = dbConfig.getClient();
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          res.status(404).json({
-            success: false,
-            error: 'User not found'
-          });
-          return;
-        }
-        
-        res.status(500).json({
-          success: false,
-          error: 'Failed to fetch user',
-          message: error.message
-        });
-        return;
-      }
-
-      res.json({
-        success: true,
-        data: data
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+    if (error) {
+      // The error middleware will handle Supabase errors automatically
+      throw error;
     }
-  }
+
+    res.json({
+      success: true,
+      data: data
+    });
+  });
 } 
