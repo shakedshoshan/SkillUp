@@ -50,7 +50,9 @@ export class CourseGenerationService {
    * Get backend URL for WebSocket connections
    */
   static getBackendUrl(): string {
-    return process.env.NEXT_PUBLIC_BACKEND_URL_PROD || process.env.NEXT_PUBLIC_BACKEND_URL || '';
+    return process.env.NODE_ENV === 'production' 
+      ? process.env.NEXT_PUBLIC_BACKEND_URL_PROD || ''
+      : process.env.NEXT_PUBLIC_BACKEND_URL || '';
   }
 }
 
