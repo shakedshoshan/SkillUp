@@ -1,8 +1,11 @@
-1. set worklow for tests
-2. fix api of generate course
+1. set worklow for tests {cm:2025-07-09}
+2. fix api of generate course {cm:2025-07-09}
 3. add middleware for api errors handeling {cm:2025-07-09}
 4. implement kafka
 5. ai chat - assistant for having ideas. using ollama fine tune
 6. add an edit endpoint of course
 7. add a generate content for different parts in the edir courses
 8. ask for anther idea for pro projects
+
+
+9. fix api of generate course
