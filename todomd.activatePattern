@@ -1,0 +1,8 @@
+1. set worklow for tests
+2. fix api of generate course
+3. add middleware for api errors handeling
+4. implement kafka
+5. ai chat - assistant for having ideas. using ollama fine tune
+6. add an edit endpoint of course
+7. add a generate content for different parts in the edir courses
+8. ask for anther idea for pro projects
