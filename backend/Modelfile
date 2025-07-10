@@ -1,4 +1,4 @@
-FROM gemma3n:e4b
+FROM gemma3:latest
 PARAMETER temperature 0.7
 PARAMETER num_ctx 32768
 
