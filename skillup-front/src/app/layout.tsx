@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { Navigation } from "@/components/layout/navigation";
 import { Analytics } from '@vercel/analytics/react';
+import { ChatButton } from "../components/layout/chat-button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
           <main className="min-h-screen">
             {children}
           </main>
+          <ChatButton />
         </AuthProvider>
         <Analytics />
       </body>
