@@ -14,6 +14,9 @@ interface ChatProps {
   showHeader?: boolean;
 }
 
+// Session storage key for chat messages
+const CHAT_STORAGE_KEY = 'coursebot_chat_messages';
+
 export function Chat({ 
   className = '', 
   placeholder = 'Ask CourseBot anything...',
@@ -27,6 +30,77 @@ export function Chat({
   const [isServiceAvailable, setIsServiceAvailable] = useState<boolean | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load messages from session storage
+  const loadMessagesFromStorage = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const storedMessages = sessionStorage.getItem(CHAT_STORAGE_KEY);
+        if (storedMessages) {
+          const parsedMessages = JSON.parse(storedMessages);
+          // Validate that the stored data is an array of valid ChatMessage objects
+          if (Array.isArray(parsedMessages) && 
+              parsedMessages.every(msg => 
+                typeof msg === 'object' && 
+                msg.hasOwnProperty('role') && 
+                msg.hasOwnProperty('content') &&
+                (msg.role === 'user' || msg.role === 'assistant') &&
+                typeof msg.content === 'string'
+              )) {
+            setMessages(parsedMessages);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading messages from session storage:', error);
+      // If there's an error, clear the corrupted data
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(CHAT_STORAGE_KEY);
+      }
+    }
+  };
+
+  // Save messages to session storage
+  const saveMessagesToStorage = (messagesToSave: ChatMessage[]) => {
+    try {
+      if (typeof window !== 'undefined') {
+        if (messagesToSave.length > 0) {
+          sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
+        } else {
+          // Remove from storage if no messages
+          sessionStorage.removeItem(CHAT_STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving messages to session storage:', error);
+    }
+  };
+
+  // Load messages from session storage on component mount
+  useEffect(() => {
+    loadMessagesFromStorage();
+  }, []);
+
+  // Listen for storage changes to sync across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === CHAT_STORAGE_KEY) {
+        loadMessagesFromStorage();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, []);
+
+  // Save messages to session storage whenever messages change
+  useEffect(() => {
+    saveMessagesToStorage(messages);
+  }, [messages]);
 
   // Check service availability on mount
   useEffect(() => {
@@ -96,6 +170,15 @@ export function Chat({
   const clearChat = () => {
     setMessages([]);
     setError(null);
+    // Clear messages from session storage
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    }
+  };
+
+  // Optional: Refresh messages from storage (useful for syncing across tabs)
+  const refreshMessagesFromStorage = () => {
+    loadMessagesFromStorage();
   };
 
   const retryLastMessage = async () => {

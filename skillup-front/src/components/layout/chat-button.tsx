@@ -91,14 +91,8 @@ export function ChatButton() {
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 2C6.486 2 2 6.486 2 12c0 1.674.395 3.251 1.09 4.652L2 22l5.348-1.09C8.749 21.605 10.326 22 12 22c5.514 0 10-4.486 10-10S17.514 2 12 2zm-1 13h2v2h-2v-2zm2-6.141V11h-2V8.859c0-.801.312-1.555.879-2.121C12.445 6.172 13.199 5.86 14 5.86s1.555.312 2.121.879c.566.566.879 1.32.879 2.121 0 1.018-.377 1.969-1.061 2.678L14 13.482V11z"/>
-                  </svg>
-                  <Image src="/icons/human.png" width={40} height={40} alt="CourseBot" className="w-full h-full object-cover" />
+                 
+                  <Image src="/icons/person.png" width={40} height={40} alt="CourseBot" className="w-full h-full rounded-full object-cover" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">CourseBot</h3>
