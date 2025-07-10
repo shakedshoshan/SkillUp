@@ -2,6 +2,7 @@
 export { CourseService } from './course.service';
 export { CourseGenerationService } from './course-generation.service';
 export { WebSocketService } from './websocket.service';
+export { LLMService } from './llm.service';
 
 // Types
 export type { 
@@ -23,4 +24,12 @@ export type {
 
 export type { 
   WebSocketCallbacks 
-} from './websocket.service'; 
+} from './websocket.service';
+
+export type { 
+  ChatMessage, 
+  ChatRequest, 
+  ChatResponse, 
+  HealthResponse, 
+  ChatInfoResponse 
+} from './llm.service'; 
