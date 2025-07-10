@@ -10,6 +10,7 @@ import userRouter from './src/route/user.route';
 import courseRouter from './src/route/course.route';
 import lessonRouter from './src/route/lesson.route';
 import courseGenerationRouter, { setupCourseGenerationWebSocket } from './src/route/course-generation.route';
+import chatRouter from './src/llm/routes/chat.route';
 import { globalErrorHandler, notFound } from './src/middleware/error.middleware';
 import { requestLogger, performanceMonitor } from './src/middleware/logger.middleware';
 
@@ -186,6 +187,7 @@ app.use('/api/v1/users', userRouter);
 app.use('/api/v1/courses', courseRouter);
 app.use('/api/v1/lessons', lessonRouter);
 app.use('/api/v1/course-generation', courseGenerationRouter);
+app.use('/api/v1/chat', chatRouter);
 
 // API v1 info endpoint
 app.get('/api/v1', (req: Request, res: Response) => {
@@ -213,6 +215,9 @@ app.get('/api/v1', (req: Request, res: Response) => {
       'GET /api/v1/course-generation/download/:sessionId - Download generated course',
       'GET /api/v1/course-generation/load/:courseId - Load a saved course',
       'GET /api/v1/course-generation/list - List all saved courses',
+      'POST /api/v1/chat - Chat with CourseBot for course idea brainstorming',
+      'GET /api/v1/chat/health - Check CourseBot service health',
+      'GET /api/v1/chat/models - Get available Ollama models',
     ]
   });
 });
