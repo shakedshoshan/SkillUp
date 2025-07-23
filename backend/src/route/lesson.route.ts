@@ -2,11 +2,17 @@ import { Router, Request, Response } from 'express';
 import { StreamingCourseBuilderAgent, StreamMessage } from '../course_agent/course-builder-stream';
 import { CourseActivation } from '../course_agent/models';
 import { Server as SocketIOServer } from 'socket.io';
+import { LessonController } from '../controller/lesson.controller';
 
 const router = Router();
 
 // Store active generation sessions
 const activeSessions = new Map<string, { agent: StreamingCourseBuilderAgent; status: 'running' | 'completed' | 'failed' }>();
+
+// Lesson endpoints
+router.post('/:lessonId/complete', LessonController.completeLesson);
+router.get('/:lessonId/completion/:userId', LessonController.getLessonCompletion);
+router.post('/:lessonId/quiz/submit', LessonController.submitQuiz);
 
 /**
  * Start course generation with real-time streaming
