@@ -1,4 +1,3 @@
-import { StateGraph, END } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 import { WorkflowState, CourseStructure, CoursePart, CourseLesson, LessonContent } from './models';
 import { CoursePrompts } from './prompts';
@@ -25,14 +24,20 @@ const LessonsResponseSchema = z.object({
   lessons: z.array(LessonHeaderSchema)
 });
 
+// Define workflow node types for better type safety
+type WorkflowNode = (state: WorkflowState) => Promise<Partial<WorkflowState>>;
+type ConditionalEdge = (state: WorkflowState) => string;
+
 export class CourseBuilderWorkflow {
   private llm: ChatOpenAI;
   private client: OpenAI;
   private knowledgeService: KnowledgeService;
-  private workflow: any;
+  private nodes: Map<string, WorkflowNode>;
+  private edges: Map<string, ConditionalEdge>;
+  private entryPoint: string;
 
   constructor() {
-    console.log("🔨 Initializing Course Builder Workflow...");
+    console.log("🔨 Initializing Course Builder Workflow with LangGraph Principles...");
     
     // Standard LLM for structure and lesson planning
     this.llm = new ChatOpenAI({
@@ -46,40 +51,67 @@ export class CourseBuilderWorkflow {
     });
 
     this.knowledgeService = new KnowledgeService();
-    this.workflow = this._buildWorkflow();
-    console.log("✅ LangGraph Workflow with Web Search Ready!");
+    
+    // Initialize workflow components
+    this.nodes = new Map();
+    this.edges = new Map();
+    this.entryPoint = "extract_structure";
+    
+    this._buildWorkflow();
+    console.log("✅ LangGraph-Style Workflow with Web Search Ready!");
   }
 
   /**
-   * Build the workflow (simplified sequential execution)
+   * Build the workflow following LangGraph principles
    */
   private _buildWorkflow() {
-    // For now, use sequential execution following LangGraph pattern
-    // TODO: Implement full StateGraph when TypeScript types are compatible
-    return {
-      invoke: async (state: WorkflowState) => {
-        // Step 1: Extract Course Structure
-        console.log(CourseFormatter.formatProgress(1, 3, 'Extracting Course Structure'));
-        const structureUpdate = await this._extractCourseStructure(state);
-        const state1 = { ...state, ...structureUpdate };
+    // Add nodes to the workflow
+    this.nodes.set("extract_structure", this._extractCourseStructure.bind(this));
+    this.nodes.set("build_lessons", this._buildLessons.bind(this));
+    this.nodes.set("generate_content", this._generateLessonContent.bind(this));
+    this.nodes.set("finalize_course", this._finalizeCourse.bind(this));
 
-        // Step 2: Build Lessons  
-        console.log(CourseFormatter.formatProgress(2, 3, 'Building Lessons'));
-        const lessonsUpdate = await this._buildLessons(state1);
-        const state2 = { ...state1, ...lessonsUpdate };
-
-        // Step 3: Generate Content
-        console.log(CourseFormatter.formatProgress(3, 3, 'Generating Content'));
-        const contentUpdate = await this._generateLessonContent(state2);
-        const finalState = { ...state2, ...contentUpdate };
-
-        return finalState;
-      }
-    };
+    // Add conditional edges
+    this.edges.set("extract_structure", this._shouldBuildLessons);
+    this.edges.set("build_lessons", this._shouldGenerateContent);
+    this.edges.set("generate_content", this._shouldFinalize);
   }
 
   /**
-   * Execute the complete course building workflow
+   * Conditional edge function: Should we proceed to build lessons?
+   */
+  private _shouldBuildLessons(state: WorkflowState): string {
+    return state.course_structure && state.course_structure.parts.length > 0 ? "build_lessons" : "END";
+  }
+
+  /**
+   * Conditional edge function: Should we proceed to generate content?
+   */
+  private _shouldGenerateContent(state: WorkflowState): string {
+    if (!state.course_structure) return "END";
+    
+    const hasLessons = state.course_structure.parts.some(part => 
+      part.lessons && part.lessons.length > 0
+    );
+    
+    return hasLessons ? "generate_content" : "END";
+  }
+
+  /**
+   * Conditional edge function: Should we finalize the course?
+   */
+  private _shouldFinalize(state: WorkflowState): string {
+    if (!state.course_structure) return "END";
+    
+    const hasContent = state.course_structure.parts.every(part => 
+      part.lessons && part.lessons.every(lesson => lesson.content)
+    );
+    
+    return hasContent ? "finalize_course" : "END";
+  }
+
+  /**
+   * Execute the complete course building workflow using LangGraph principles
    */
   async run(userQuery: string, webSearchEnabled: boolean = false): Promise<WorkflowState> {
     console.log(`\n🚀 Starting Course Builder for: '${userQuery}'`);
@@ -101,7 +133,7 @@ export class CourseBuilderWorkflow {
     };
 
     try {
-      const finalState = await this.workflow.invoke(initialState);
+      const finalState = await this._executeWorkflow(initialState);
       console.log('\n✅ Course Building Complete!');
       return finalState;
     } catch (error) {
@@ -111,10 +143,64 @@ export class CourseBuilderWorkflow {
   }
 
   /**
-   * Step 1: Extract main course parts and structure
+   * Execute the workflow following LangGraph execution pattern
+   */
+  private async _executeWorkflow(initialState: WorkflowState): Promise<WorkflowState> {
+    let currentState = { ...initialState };
+    let currentNode = this.entryPoint;
+    let executionCount = 0;
+    const maxExecutions = 10; // Prevent infinite loops
+
+    while (currentNode !== "END" && executionCount < maxExecutions) {
+      console.log(`\n🔄 Executing node: ${currentNode} (iteration ${executionCount + 1})`);
+      
+      // Execute the current node
+      const nodeFunction = this.nodes.get(currentNode);
+      if (!nodeFunction) {
+        throw new Error(`Node '${currentNode}' not found in workflow`);
+      }
+
+      const nodeResult = await nodeFunction(currentState);
+      currentState = { ...currentState, ...nodeResult };
+
+      // Determine next node based on conditional edge
+      const edgeFunction = this.edges.get(currentNode);
+      if (edgeFunction) {
+        currentNode = edgeFunction(currentState);
+      } else {
+        // If no edge function, move to next logical node or end
+        currentNode = this._getNextNode(currentNode);
+      }
+
+      executionCount++;
+    }
+
+    if (executionCount >= maxExecutions) {
+      console.warn('⚠️  Maximum workflow executions reached');
+    }
+
+    return currentState;
+  }
+
+  /**
+   * Get the next node in the workflow sequence
+   */
+  private _getNextNode(currentNode: string): string {
+    const nodeSequence = ["extract_structure", "build_lessons", "generate_content", "finalize_course"];
+    const currentIndex = nodeSequence.indexOf(currentNode);
+    
+    if (currentIndex === -1 || currentIndex === nodeSequence.length - 1) {
+      return "END";
+    }
+    
+    return nodeSequence[currentIndex + 1];
+  }
+
+  /**
+   * Node 1: Extract main course parts and structure
    */
   private async _extractCourseStructure(state: WorkflowState): Promise<Partial<WorkflowState>> {
-    console.log('\n📋 STEP 1: Extracting Course Structure...');
+    console.log('\n📋 NODE 1: Extracting Course Structure...');
     console.log(`   Analyzing subject: ${state.user_query}`);
 
     try {
@@ -157,10 +243,10 @@ export class CourseBuilderWorkflow {
   }
 
   /**
-   * Step 2: Build lessons for each course part
+   * Node 2: Build lessons for each course part
    */
   private async _buildLessons(state: WorkflowState): Promise<Partial<WorkflowState>> {
-    console.log('\n📚 STEP 2: Building Lessons for Each Part...');
+    console.log('\n📚 NODE 2: Building Lessons for Each Part...');
 
     if (!state.course_structure) {
       throw new Error('Course structure not available');
@@ -220,11 +306,11 @@ export class CourseBuilderWorkflow {
   }
 
   /**
-   * Step 3: Generate detailed content for each lesson
+   * Node 3: Generate detailed content for each lesson
    */
   private async _generateLessonContent(state: WorkflowState): Promise<Partial<WorkflowState>> {
     const searchMethod = state.web_search_enabled ? 'with Web Search' : 'with Standard Knowledge';
-    console.log(`\n📝 STEP 3: Generating Detailed Lesson Content ${searchMethod}...`);
+    console.log(`\n📝 NODE 3: Generating Detailed Lesson Content ${searchMethod}...`);
 
     if (!state.course_structure) {
       throw new Error('Course structure not available');
@@ -287,6 +373,44 @@ export class CourseBuilderWorkflow {
 
     } catch (error) {
       console.error('   ❌ Error generating lesson content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Node 4: Finalize course and prepare for output
+   */
+  private async _finalizeCourse(state: WorkflowState): Promise<Partial<WorkflowState>> {
+    console.log('\n🎯 NODE 4: Finalizing Course...');
+
+    if (!state.course_structure) {
+      throw new Error('Course structure not available');
+    }
+
+    try {
+      // Validate the complete course structure
+      const validatedStructure = CourseStructureSchema.parse(state.course_structure);
+      
+      // Calculate final statistics
+      const totalParts = validatedStructure.parts.length;
+      const totalLessons = validatedStructure.parts.reduce((total, part) => total + part.lessons.length, 0);
+      const totalQuizzes = validatedStructure.parts.reduce((total, part) => 
+        total + part.lessons.filter(lesson => lesson.content?.quiz).length, 0
+      );
+
+      console.log(`   ✓ Course validated successfully`);
+      console.log(`   ✓ Final statistics:`);
+      console.log(`      - Parts: ${totalParts}`);
+      console.log(`      - Lessons: ${totalLessons}`);
+      console.log(`      - Quizzes: ${totalQuizzes}`);
+
+      return {
+        course_structure: validatedStructure,
+        status_message: `Course finalized: ${totalParts} parts, ${totalLessons} lessons, ${totalQuizzes} quizzes`
+      };
+
+    } catch (error) {
+      console.error('   ❌ Error finalizing course:', error);
       throw error;
     }
   }
