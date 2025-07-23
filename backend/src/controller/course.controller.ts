@@ -992,7 +992,12 @@ export class CourseController {
         .eq('lesson_id', lessonId)
         .single();
 
+      let quizId: string;
+
       if (existingQuiz) {
+        // Use existing quiz
+        quizId = existingQuiz.id;
+        
         // Delete existing quiz questions and options (cascade will handle options)
         const { error: deleteQuestionsError } = await supabase
           .from('quiz_questions')
@@ -1016,38 +1021,40 @@ export class CourseController {
           throw quizError;
         }
 
-        // Create quiz questions and options
-        if (quiz.questions && quiz.questions.length > 0) {
-          for (const question of quiz.questions) {
-            const { data: questionData, error: questionError } = await supabase
-              .from('quiz_questions')
+        quizId = quizData.id;
+      }
+
+      // Create quiz questions and options (for both new and existing quizzes)
+      if (quiz.questions && quiz.questions.length > 0) {
+        for (const question of quiz.questions) {
+          const { data: questionData, error: questionError } = await supabase
+            .from('quiz_questions')
+            .insert({
+              quiz_id: quizId,
+              question_number: question.question_number,
+              question: question.question,
+              explanation: question.explanation
+            })
+            .select()
+            .single();
+
+          if (questionError) {
+            throw questionError;
+          }
+
+          // Create quiz options
+          for (const option of question.options) {
+            const { error: optionError } = await supabase
+              .from('quiz_options')
               .insert({
-                quiz_id: quizData.id,
-                question_number: question.question_number,
-                question: question.question,
-                explanation: question.explanation
-              })
-              .select()
-              .single();
+                question_id: questionData.id,
+                option_letter: option.option_letter,
+                option_text: option.option_text,
+                is_correct: option.is_correct
+              });
 
-            if (questionError) {
-              throw questionError;
-            }
-
-            // Create quiz options
-            for (const option of question.options) {
-              const { error: optionError } = await supabase
-                .from('quiz_options')
-                .insert({
-                  question_id: questionData.id,
-                  option_letter: option.option_letter,
-                  option_text: option.option_text,
-                  is_correct: option.is_correct
-                });
-
-              if (optionError) {
-                throw optionError;
-              }
+            if (optionError) {
+              throw optionError;
             }
           }
         }

@@ -19,7 +19,8 @@ import {
   Target,
   Award,
   Brain,
-  Play
+  Play,
+  Edit
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -170,6 +171,12 @@ export default function CoursePage() {
               Back to Dashboard
             </Button>
             <div className="flex items-center gap-2">
+              <Link href={`/course/${courseId}/edit`}>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Course
+                </Button>
+              </Link>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(course.difficulty_level)}`}>
                 {course.difficulty_level}
               </span>

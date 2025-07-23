@@ -9,6 +9,8 @@ import {
   type Course, 
   type CoursePart, 
   type Lesson,
+  type QuizQuestion,
+  type QuizOption,
   CourseService 
 } from '@/lib/services/course.service'
 import { 
@@ -20,7 +22,10 @@ import {
   BookOpen, 
   FileText,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  HelpCircle,
+  CheckCircle,
+  Circle
 } from 'lucide-react'
 
 export default function CourseEditPage() {
@@ -34,6 +39,7 @@ export default function CourseEditPage() {
   const [editingCourse, setEditingCourse] = useState(false)
   const [editingPart, setEditingPart] = useState<string | null>(null)
   const [editingLesson, setEditingLesson] = useState<string | null>(null)
+  const [editingQuiz, setEditingQuiz] = useState<string | null>(null)
   const [expandedParts, setExpandedParts] = useState<Set<string>>(new Set())
 
   // Form states
@@ -67,13 +73,57 @@ export default function CourseEditPage() {
       estimated_duration: '30 minutes'
     },
     quiz: {
-      questions: [] as any[]
+      questions: [] as {
+        question_number: number;
+        question: string;
+        explanation?: string;
+        options: {
+          option_letter: string;
+          option_text: string;
+          is_correct: boolean;
+        }[];
+      }[]
     }
+  })
+
+  const [quizForm, setQuizForm] = useState({
+    questions: [] as {
+      question_number: number;
+      question: string;
+      explanation?: string;
+      options: {
+        option_letter: string;
+        option_text: string;
+        is_correct: boolean;
+      }[];
+    }[]
   })
 
   useEffect(() => {
     loadCourse()
   }, [courseId])
+
+  // Debug quiz form changes
+  useEffect(() => {
+    if (editingQuiz) {
+      console.log('=== QUIZ FORM UPDATED ===')
+      console.log('editingQuiz:', editingQuiz)
+      console.log('quizForm.questions.length:', quizForm.questions.length)
+      console.log('quizForm:', quizForm)
+    }
+  }, [quizForm, editingQuiz])
+
+  // Debug editingQuiz changes
+  useEffect(() => {
+    console.log('editingQuiz changed to:', editingQuiz)
+  }, [editingQuiz])
+
+  // Preserve quiz form state when editing
+  useEffect(() => {
+    if (editingQuiz && quizForm.questions.length === 0) {
+      console.log('Quiz form is empty but we are editing a quiz, this might be a bug')
+    }
+  }, [editingQuiz, quizForm.questions.length])
 
   const loadCourse = async () => {
     try {
@@ -207,15 +257,19 @@ export default function CourseEditPage() {
       const lesson = part?.lessons?.find(l => l.id === lessonId)
       if (!lesson) return
 
+      // Always use the current quiz form data if we're editing a quiz, otherwise use the lesson's existing quiz
+      const quizData = editingQuiz === lessonId ? { questions: quizForm.questions } : (lesson.quiz ? { questions: lesson.quiz.questions } : undefined)
+
       const response = await CourseService.updateLesson(courseId, partId, lessonId, {
         title: lessonForm.title || lesson.title,
         description: lessonForm.description || lesson.description,
         content: lessonForm.content,
-        quiz: lessonForm.quiz
+        quiz: quizData
       })
 
       if (response.success) {
         setEditingLesson(null)
+        setEditingQuiz(null)
         setLessonForm({
           title: '',
           description: '',
@@ -230,6 +284,7 @@ export default function CourseEditPage() {
           },
           quiz: { questions: [] }
         })
+        setQuizForm({ questions: [] })
         await loadCourse()
       }
     } catch (error) {
@@ -255,6 +310,194 @@ export default function CourseEditPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Quiz management functions
+  const startEditingQuiz = (lesson: Lesson) => {
+    const quizQuestions = lesson.quiz?.questions || []
+    console.log('=== STARTING QUIZ EDIT ===')
+    console.log('Lesson ID:', lesson.id)
+    console.log('Questions found:', quizQuestions.length)
+    console.log('Original quiz questions:', quizQuestions)
+    
+    const mappedQuestions = quizQuestions.map(q => ({
+      question_number: q.question_number,
+      question: q.question,
+      explanation: q.explanation || '',
+      options: q.options.map(o => ({
+        option_letter: o.option_letter,
+        option_text: o.option_text,
+        is_correct: o.is_correct
+      }))
+    }))
+    
+    console.log('Mapped questions:', mappedQuestions.length)
+    console.log('Mapped questions content:', mappedQuestions)
+    
+    setQuizForm({
+      questions: mappedQuestions
+    })
+    setEditingQuiz(lesson.id)
+    
+    console.log('Quiz form state set, editingQuiz set to:', lesson.id)
+  }
+
+  const handleSaveQuiz = async (partId: string, lessonId: string) => {
+    try {
+      setSaving(true)
+      const part = course?.parts?.find(p => p.id === partId)
+      const lesson = part?.lessons?.find(l => l.id === lessonId)
+      if (!lesson) return
+
+      console.log('=== SAVING QUIZ ===')
+      console.log('Part ID:', partId)
+      console.log('Lesson ID:', lessonId)
+      console.log('Quiz form questions:', quizForm.questions)
+      console.log('Quiz form questions length:', quizForm.questions.length)
+
+      const updateData = {
+        title: lesson.title,
+        description: lesson.description,
+        content: lesson.content || {
+          title: '',
+          learning_objectives: [],
+          content: '',
+          key_concepts: [],
+          examples: [],
+          exercises: [],
+          estimated_duration: '30 minutes'
+        },
+        quiz: { questions: quizForm.questions }
+      }
+
+      console.log('Sending update data:', updateData)
+
+      const response = await CourseService.updateLesson(courseId, partId, lessonId, updateData)
+
+      console.log('Update response:', response)
+
+      if (response.success) {
+        setEditingQuiz(null)
+        setQuizForm({ questions: [] })
+        await loadCourse()
+      }
+    } catch (error) {
+      console.error('Failed to save quiz:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addQuizQuestion = () => {
+    if (!editingQuiz) {
+      console.error('Cannot add question: not editing a quiz')
+      return
+    }
+    
+    console.log('=== ADDING QUIZ QUESTION ===')
+    console.log('Current editingQuiz:', editingQuiz)
+    console.log('Current quizForm state:', quizForm)
+    console.log('Current quizForm.questions:', quizForm.questions)
+    
+    const currentQuestions = quizForm.questions || []
+    const newQuestionNumber = currentQuestions.length + 1
+    
+    console.log('Adding question', newQuestionNumber, 'Current questions:', currentQuestions.length)
+    
+    const newQuestion = {
+      question_number: newQuestionNumber,
+      question: '',
+      explanation: '',
+      options: [
+        { option_letter: 'A', option_text: '', is_correct: true },
+        { option_letter: 'B', option_text: '', is_correct: false },
+        { option_letter: 'C', option_text: '', is_correct: false },
+        { option_letter: 'D', option_text: '', is_correct: false }
+      ]
+    }
+    
+    const newQuestions = [...currentQuestions, newQuestion]
+    console.log('New questions array:', newQuestions.length)
+    console.log('New questions array content:', newQuestions)
+    
+    setQuizForm({
+      questions: newQuestions
+    })
+    console.log('State update called with:', { questions: newQuestions })
+  }
+
+  const updateQuizQuestion = (questionIndex: number, field: string, value: string) => {
+    setQuizForm(prev => ({
+      questions: prev.questions.map((q, index) => 
+        index === questionIndex ? { ...q, [field]: value } : q
+      )
+    }))
+  }
+
+  const updateQuizOption = (questionIndex: number, optionIndex: number, field: string, value: any) => {
+    setQuizForm(prev => ({
+      questions: prev.questions.map((q, qIndex) => 
+        qIndex === questionIndex ? {
+          ...q,
+          options: q.options.map((o, oIndex) => 
+            oIndex === optionIndex ? { ...o, [field]: value } : o
+          )
+        } : q
+      )
+    }))
+  }
+
+  const removeQuizQuestion = (questionIndex: number) => {
+    setQuizForm(prev => ({
+      questions: prev.questions
+        .filter((_, index) => index !== questionIndex)
+        .map((q, index) => ({ ...q, question_number: index + 1 }))
+    }))
+  }
+
+  const addQuizOption = (questionIndex: number) => {
+    setQuizForm(prev => ({
+      questions: prev.questions.map((q, index) => 
+        index === questionIndex ? {
+          ...q,
+          options: [
+            ...q.options,
+            {
+              option_letter: String.fromCharCode(65 + q.options.length), // A, B, C, D, E, etc.
+              option_text: '',
+              is_correct: false
+            }
+          ]
+        } : q
+      )
+    }))
+  }
+
+  const removeQuizOption = (questionIndex: number, optionIndex: number) => {
+    setQuizForm(prev => ({
+      questions: prev.questions.map((q, qIndex) => 
+        qIndex === questionIndex ? {
+          ...q,
+          options: q.options
+            .filter((_, oIndex) => oIndex !== optionIndex)
+            .map((o, oIndex) => ({ ...o, option_letter: String.fromCharCode(65 + oIndex) }))
+        } : q
+      )
+    }))
+  }
+
+  const setCorrectOption = (questionIndex: number, optionIndex: number) => {
+    setQuizForm(prev => ({
+      questions: prev.questions.map((q, qIndex) => 
+        qIndex === questionIndex ? {
+          ...q,
+          options: q.options.map((o, oIndex) => ({
+            ...o,
+            is_correct: oIndex === optionIndex
+          }))
+        } : q
+      )
+    }))
   }
 
   const togglePartExpansion = (partId: string) => {
@@ -292,6 +535,15 @@ export default function CourseEditPage() {
       quiz: lesson.quiz || { questions: [] }
     })
     setEditingLesson(lesson.id)
+    
+    // Only reset quiz form if we're not currently editing a quiz for this lesson
+    if (editingQuiz !== lesson.id) {
+      setEditingQuiz(null)
+      setQuizForm({ questions: [] })
+    } else {
+      // If we're already editing this lesson's quiz, preserve the quiz form state
+      console.log('Preserving quiz form state for lesson:', lesson.id)
+    }
   }
 
   if (loading) {
@@ -527,6 +779,23 @@ export default function CourseEditPage() {
                             <div>
                               <h6 className="font-medium">Lesson {lesson.lesson_number}: {lesson.title}</h6>
                               <p className="text-sm text-gray-600">{lesson.description}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {lesson.quiz ? (
+                                  <>
+                                    <HelpCircle className="h-3 w-3 text-blue-500" />
+                                    <span className="text-xs text-blue-600">
+                                      Quiz: {lesson.quiz.questions?.length || 0} questions
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <HelpCircle className="h-3 w-3 text-gray-400" />
+                                    <span className="text-xs text-gray-500">
+                                      No quiz
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                             <div className="flex gap-2">
                               <Button
@@ -536,6 +805,28 @@ export default function CourseEditPage() {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
+                              {lesson.quiz ? (
+                                <Button
+                                  onClick={() => startEditingQuiz(lesson)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-blue-600"
+                                >
+                                  <HelpCircle className="h-4 w-4" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  onClick={() => {
+                                    setQuizForm({ questions: [] })
+                                    setEditingQuiz(lesson.id)
+                                  }}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 onClick={() => handleDeleteLesson(part.id, lesson.id)}
                                 size="sm"
@@ -588,6 +879,138 @@ export default function CourseEditPage() {
                                 <Button onClick={() => setEditingLesson(null)} variant="outline">
                                   <X className="h-4 w-4" />
                                 </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {editingQuiz === lesson.id && (
+                            <div className="mt-4 space-y-4 border-t pt-4">
+                              <div className="flex items-center justify-between">
+                                <h6 className="font-medium flex items-center gap-2">
+                                  <HelpCircle className="h-4 w-4" />
+                                  Quiz Editor ({quizForm.questions.length} questions)
+                                </h6>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    onClick={() => {
+                                      console.log('Add Question button clicked')
+                                      console.log('Current editingQuiz:', editingQuiz)
+                                      console.log('Current quizForm:', quizForm)
+                                      addQuizQuestion()
+                                    }} 
+                                    size="sm"
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Question
+                                  </Button>
+                                  <Button onClick={() => handleSaveQuiz(part.id, lesson.id)} disabled={saving} size="sm">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Quiz
+                                  </Button>
+                                  <Button onClick={() => setEditingQuiz(null)} variant="outline" size="sm">
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                {/* Debug info */}
+                                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                                  Debug: {quizForm.questions.length} questions in state | Editing Quiz: {editingQuiz === lesson.id ? 'YES' : 'NO'}
+                                </div>
+                                {quizForm.questions.map((question, questionIndex) => (
+                                  <div key={`question-${question.question_number}-${questionIndex}`} className="border rounded-lg p-4 bg-gray-50">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h6 className="font-medium">Question {question.question_number}</h6>
+                                      <Button
+                                        onClick={() => removeQuizQuestion(questionIndex)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-sm font-medium mb-1">Question</label>
+                                        <textarea
+                                          value={question.question}
+                                          onChange={(e) => updateQuizQuestion(questionIndex, 'question', e.target.value)}
+                                          placeholder="Enter your question"
+                                          className="w-full p-2 border rounded-md"
+                                          rows={2}
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-sm font-medium mb-1">Explanation (optional)</label>
+                                        <textarea
+                                          value={question.explanation || ''}
+                                          onChange={(e) => updateQuizQuestion(questionIndex, 'explanation', e.target.value)}
+                                          placeholder="Explanation for the correct answer"
+                                          className="w-full p-2 border rounded-md"
+                                          rows={2}
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                          <label className="block text-sm font-medium">Options</label>
+                                          <Button
+                                            onClick={() => addQuizOption(questionIndex)}
+                                            size="sm"
+                                            variant="outline"
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Add Option
+                                          </Button>
+                                        </div>
+                                        <div className="space-y-2">
+                                          {question.options.map((option, optionIndex) => (
+                                            <div key={optionIndex} className="flex items-center gap-2">
+                                              <button
+                                                onClick={() => setCorrectOption(questionIndex, optionIndex)}
+                                                className="p-1 hover:bg-gray-200 rounded"
+                                              >
+                                                {option.is_correct ? (
+                                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                                ) : (
+                                                  <Circle className="h-4 w-4 text-gray-400" />
+                                                )}
+                                              </button>
+                                              <span className="font-medium text-sm w-6">{option.option_letter}.</span>
+                                              <Input
+                                                value={option.option_text}
+                                                onChange={(e) => updateQuizOption(questionIndex, optionIndex, 'option_text', e.target.value)}
+                                                placeholder={`Option ${option.option_letter}`}
+                                                className="flex-1"
+                                              />
+                                              {question.options.length > 2 && (
+                                                <Button
+                                                  onClick={() => removeQuizOption(questionIndex, optionIndex)}
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="text-red-600 hover:text-red-700"
+                                                >
+                                                  <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+
+                                {quizForm.questions.length === 0 && (
+                                  <div className="text-center py-8 text-gray-500">
+                                    <HelpCircle className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                                    <p>No questions yet. Click "Add Question" to get started.</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
