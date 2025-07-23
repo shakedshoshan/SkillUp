@@ -322,6 +322,194 @@ export class CourseService {
       throw error;
     }
   }
+
+  // Course Editing APIs
+  static async updateCourse(courseId: string, courseData: Partial<Course>): Promise<{ success: boolean; data?: Course; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(courseData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update course: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating course:', error);
+      throw error;
+    }
+  }
+
+  static async addCoursePart(courseId: string, partData: { title: string; description: string; learning_goals?: string[] }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(partData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add course part: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding course part:', error);
+      throw error;
+    }
+  }
+
+  static async updateCoursePart(courseId: string, partId: string, partData: { title?: string; description?: string; learning_goals?: string[] }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(partData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update course part: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating course part:', error);
+      throw error;
+    }
+  }
+
+  static async deleteCoursePart(courseId: string, partId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete course part: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting course part:', error);
+      throw error;
+    }
+  }
+
+  static async addLesson(courseId: string, partId: string, lessonData: { 
+    title: string; 
+    description: string; 
+    content?: {
+      title?: string;
+      learning_objectives?: string[];
+      content?: string;
+      key_concepts?: string[];
+      examples?: string[];
+      exercises?: string[];
+      estimated_duration?: string;
+    };
+    quiz?: {
+      questions: {
+        question_number: number;
+        question: string;
+        explanation?: string;
+        options: {
+          option_letter: string;
+          option_text: string;
+          is_correct: boolean;
+        }[];
+      }[];
+    };
+  }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}/lessons`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lessonData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add lesson: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding lesson:', error);
+      throw error;
+    }
+  }
+
+  static async updateLesson(courseId: string, partId: string, lessonId: string, lessonData: { 
+    title?: string; 
+    description?: string; 
+    content?: {
+      title?: string;
+      learning_objectives?: string[];
+      content?: string;
+      key_concepts?: string[];
+      examples?: string[];
+      exercises?: string[];
+      estimated_duration?: string;
+    };
+    quiz?: {
+      questions: {
+        question_number: number;
+        question: string;
+        explanation?: string;
+        options: {
+          option_letter: string;
+          option_text: string;
+          is_correct: boolean;
+        }[];
+      }[];
+    };
+  }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lessonData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update lesson: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating lesson:', error);
+      throw error;
+    }
+  }
+
+  static async deleteLesson(courseId: string, partId: string, lessonId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}/lessons/${lessonId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete lesson: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting lesson:', error);
+      throw error;
+    }
+  }
 }
 
 export type { 

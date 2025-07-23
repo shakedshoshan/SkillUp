@@ -528,4 +528,594 @@ export class CourseController {
       data: simpleCompletions
     });
   });
+
+  // Update course details
+  static updateCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const { title, description, target_audience, prerequisites, total_duration, difficulty_level, tags, is_published } = req.body;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateUUID(id, 'Course ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if course exists
+    const { data: existingCourse, error: courseError } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (courseError || !existingCourse) {
+      throw new NotFoundError('Course');
+    }
+
+    // Update course
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (target_audience !== undefined) updateData.target_audience = target_audience;
+    if (prerequisites !== undefined) updateData.prerequisites = prerequisites;
+    if (total_duration !== undefined) updateData.total_duration = total_duration;
+    if (difficulty_level !== undefined) updateData.difficulty_level = difficulty_level;
+    if (tags !== undefined) updateData.tags = tags;
+    if (is_published !== undefined) updateData.is_published = is_published;
+    updateData.updated_at = new Date().toISOString();
+
+    const { data: course, error: updateError } = await supabase
+      .from('courses')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+      await cacheService.clearByPattern('courses:all', {
+        keyPrefix: 'skillup:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.json({
+      success: true,
+      data: course
+    });
+  });
+
+  // Add a new part to course
+  static addCoursePart = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const { title, description, learning_goals } = req.body;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateRequiredParam(title, 'Part title');
+    ValidationUtils.validateRequiredParam(description, 'Part description');
+    ValidationUtils.validateUUID(id, 'Course ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if course exists
+    const { data: course, error: courseError } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (courseError || !course) {
+      throw new NotFoundError('Course');
+    }
+
+    // Get the next part number
+    const { data: existingParts } = await supabase
+      .from('course_parts')
+      .select('part_number')
+      .eq('course_id', id)
+      .order('part_number', { ascending: false })
+      .limit(1);
+
+    const nextPartNumber = existingParts && existingParts.length > 0 ? existingParts[0].part_number + 1 : 1;
+
+    // Create new part
+    const { data: part, error: partError } = await supabase
+      .from('course_parts')
+      .insert({
+        course_id: id,
+        part_number: nextPartNumber,
+        title,
+        description,
+        learning_goals: learning_goals || []
+      })
+      .select()
+      .single();
+
+    if (partError) {
+      throw partError;
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: part
+    });
+  });
+
+  // Update course part
+  static updateCoursePart = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id, partId } = req.params;
+    const { title, description, learning_goals } = req.body;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateRequiredParam(partId, 'Part ID');
+    ValidationUtils.validateUUID(id, 'Course ID');
+    ValidationUtils.validateUUID(partId, 'Part ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if part exists and belongs to the course
+    const { data: existingPart, error: partError } = await supabase
+      .from('course_parts')
+      .select('id')
+      .eq('id', partId)
+      .eq('course_id', id)
+      .single();
+
+    if (partError || !existingPart) {
+      throw new NotFoundError('Course part');
+    }
+
+    // Update part
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (learning_goals !== undefined) updateData.learning_goals = learning_goals;
+    updateData.updated_at = new Date().toISOString();
+
+    const { data: part, error: updateError } = await supabase
+      .from('course_parts')
+      .update(updateData)
+      .eq('id', partId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.json({
+      success: true,
+      data: part
+    });
+  });
+
+  // Delete course part
+  static deleteCoursePart = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id, partId } = req.params;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateRequiredParam(partId, 'Part ID');
+    ValidationUtils.validateUUID(id, 'Course ID');
+    ValidationUtils.validateUUID(partId, 'Part ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if part exists and belongs to the course
+    const { data: existingPart, error: partError } = await supabase
+      .from('course_parts')
+      .select('id')
+      .eq('id', partId)
+      .eq('course_id', id)
+      .single();
+
+    if (partError || !existingPart) {
+      throw new NotFoundError('Course part');
+    }
+
+    // Delete part (cascade will handle lessons, content, and quizzes)
+    const { error: deleteError } = await supabase
+      .from('course_parts')
+      .delete()
+      .eq('id', partId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Course part deleted successfully'
+    });
+  });
+
+  // Add a new lesson to part
+  static addLesson = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id, partId } = req.params;
+    const { title, description, content, quiz } = req.body;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateRequiredParam(partId, 'Part ID');
+    ValidationUtils.validateRequiredParam(title, 'Lesson title');
+    ValidationUtils.validateRequiredParam(description, 'Lesson description');
+    ValidationUtils.validateUUID(id, 'Course ID');
+    ValidationUtils.validateUUID(partId, 'Part ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if part exists and belongs to the course
+    const { data: part, error: partError } = await supabase
+      .from('course_parts')
+      .select('id')
+      .eq('id', partId)
+      .eq('course_id', id)
+      .single();
+
+    if (partError || !part) {
+      throw new NotFoundError('Course part');
+    }
+
+    // Get the next lesson number
+    const { data: existingLessons } = await supabase
+      .from('course_lessons')
+      .select('lesson_number')
+      .eq('course_part_id', partId)
+      .order('lesson_number', { ascending: false })
+      .limit(1);
+
+    const nextLessonNumber = existingLessons && existingLessons.length > 0 ? existingLessons[0].lesson_number + 1 : 1;
+
+    // Create new lesson
+    const { data: lesson, error: lessonError } = await supabase
+      .from('course_lessons')
+      .insert({
+        course_part_id: partId,
+        lesson_number: nextLessonNumber,
+        title,
+        description
+      })
+      .select()
+      .single();
+
+    if (lessonError) {
+      throw lessonError;
+    }
+
+    // Create lesson content if provided
+    if (content) {
+      const { error: contentError } = await supabase
+        .from('lesson_content')
+        .insert({
+          lesson_id: lesson.id,
+          title: content.title || title,
+          learning_objectives: content.learning_objectives || [],
+          content: content.content || '',
+          key_concepts: content.key_concepts || [],
+          examples: content.examples || [],
+          exercises: content.exercises || [],
+          estimated_duration: content.estimated_duration || '30 minutes'
+        });
+
+      if (contentError) {
+        throw contentError;
+      }
+    }
+
+    // Create quiz if provided
+    if (quiz && quiz.questions && quiz.questions.length > 0) {
+      const { data: quizData, error: quizError } = await supabase
+        .from('lesson_quizzes')
+        .insert({
+          lesson_id: lesson.id
+        })
+        .select()
+        .single();
+
+      if (quizError) {
+        throw quizError;
+      }
+
+      // Create quiz questions and options
+      for (const question of quiz.questions) {
+        const { data: questionData, error: questionError } = await supabase
+          .from('quiz_questions')
+          .insert({
+            quiz_id: quizData.id,
+            question_number: question.question_number,
+            question: question.question,
+            explanation: question.explanation
+          })
+          .select()
+          .single();
+
+        if (questionError) {
+          throw questionError;
+        }
+
+        // Create quiz options
+        for (const option of question.options) {
+          const { error: optionError } = await supabase
+            .from('quiz_options')
+            .insert({
+              question_id: questionData.id,
+              option_letter: option.option_letter,
+              option_text: option.option_text,
+              is_correct: option.is_correct
+            });
+
+          if (optionError) {
+            throw optionError;
+          }
+        }
+      }
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: lesson
+    });
+  });
+
+  // Update lesson
+  static updateLesson = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id, partId, lessonId } = req.params;
+    const { title, description, content, quiz } = req.body;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateRequiredParam(partId, 'Part ID');
+    ValidationUtils.validateRequiredParam(lessonId, 'Lesson ID');
+    ValidationUtils.validateUUID(id, 'Course ID');
+    ValidationUtils.validateUUID(partId, 'Part ID');
+    ValidationUtils.validateUUID(lessonId, 'Lesson ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if lesson exists and belongs to the part and course
+    const { data: lesson, error: lessonError } = await supabase
+      .from('course_lessons')
+      .select('id')
+      .eq('id', lessonId)
+      .eq('course_part_id', partId)
+      .single();
+
+    if (lessonError || !lesson) {
+      throw new NotFoundError('Lesson');
+    }
+
+    // Update lesson basic info
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    updateData.updated_at = new Date().toISOString();
+
+    const { data: updatedLesson, error: updateError } = await supabase
+      .from('course_lessons')
+      .update(updateData)
+      .eq('id', lessonId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Update lesson content if provided
+    if (content) {
+      const { data: existingContent } = await supabase
+        .from('lesson_content')
+        .select('id')
+        .eq('lesson_id', lessonId)
+        .single();
+
+      const contentData = {
+        title: content.title || title,
+        learning_objectives: content.learning_objectives || [],
+        content: content.content || '',
+        key_concepts: content.key_concepts || [],
+        examples: content.examples || [],
+        exercises: content.exercises || [],
+        estimated_duration: content.estimated_duration || '30 minutes',
+        updated_at: new Date().toISOString()
+      };
+
+      if (existingContent) {
+        // Update existing content
+        const { error: contentError } = await supabase
+          .from('lesson_content')
+          .update(contentData)
+          .eq('id', existingContent.id);
+
+        if (contentError) {
+          throw contentError;
+        }
+      } else {
+        // Create new content
+        const { error: contentError } = await supabase
+          .from('lesson_content')
+          .insert({
+            lesson_id: lessonId,
+            ...contentData
+          });
+
+        if (contentError) {
+          throw contentError;
+        }
+      }
+    }
+
+    // Update quiz if provided
+    if (quiz) {
+      const { data: existingQuiz } = await supabase
+        .from('lesson_quizzes')
+        .select('id')
+        .eq('lesson_id', lessonId)
+        .single();
+
+      if (existingQuiz) {
+        // Delete existing quiz questions and options (cascade will handle options)
+        const { error: deleteQuestionsError } = await supabase
+          .from('quiz_questions')
+          .delete()
+          .eq('quiz_id', existingQuiz.id);
+
+        if (deleteQuestionsError) {
+          throw deleteQuestionsError;
+        }
+      } else {
+        // Create new quiz
+        const { data: quizData, error: quizError } = await supabase
+          .from('lesson_quizzes')
+          .insert({
+            lesson_id: lessonId
+          })
+          .select()
+          .single();
+
+        if (quizError) {
+          throw quizError;
+        }
+
+        // Create quiz questions and options
+        if (quiz.questions && quiz.questions.length > 0) {
+          for (const question of quiz.questions) {
+            const { data: questionData, error: questionError } = await supabase
+              .from('quiz_questions')
+              .insert({
+                quiz_id: quizData.id,
+                question_number: question.question_number,
+                question: question.question,
+                explanation: question.explanation
+              })
+              .select()
+              .single();
+
+            if (questionError) {
+              throw questionError;
+            }
+
+            // Create quiz options
+            for (const option of question.options) {
+              const { error: optionError } = await supabase
+                .from('quiz_options')
+                .insert({
+                  question_id: questionData.id,
+                  option_letter: option.option_letter,
+                  option_text: option.option_text,
+                  is_correct: option.is_correct
+                });
+
+              if (optionError) {
+                throw optionError;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.json({
+      success: true,
+      data: updatedLesson
+    });
+  });
+
+  // Delete lesson
+  static deleteLesson = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { id, partId, lessonId } = req.params;
+
+    ValidationUtils.validateRequiredParam(id, 'Course ID');
+    ValidationUtils.validateRequiredParam(partId, 'Part ID');
+    ValidationUtils.validateRequiredParam(lessonId, 'Lesson ID');
+    ValidationUtils.validateUUID(id, 'Course ID');
+    ValidationUtils.validateUUID(partId, 'Part ID');
+    ValidationUtils.validateUUID(lessonId, 'Lesson ID');
+
+    const supabase = dbConfig.getClient();
+
+    // Check if lesson exists and belongs to the part and course
+    const { data: lesson, error: lessonError } = await supabase
+      .from('course_lessons')
+      .select('id')
+      .eq('id', lessonId)
+      .eq('course_part_id', partId)
+      .single();
+
+    if (lessonError || !lesson) {
+      throw new NotFoundError('Lesson');
+    }
+
+    // Delete lesson (cascade will handle content, quiz, questions, and options)
+    const { error: deleteError } = await supabase
+      .from('course_lessons')
+      .delete()
+      .eq('id', lessonId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    // Invalidate course cache
+    try {
+      await cacheService.clearByPattern(`course:${id}:*`, {
+        keyPrefix: 'skillup:courses:'
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate course cache:', cacheError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Lesson deleted successfully'
+    });
+  });
 } 
