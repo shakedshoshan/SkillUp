@@ -18,7 +18,7 @@ interface HealthResponse {
   success: boolean;
   status: 'healthy' | 'unavailable' | 'error';
   service: string;
-  ollama_available: boolean;
+  openai_available: boolean;
   available_models: string[];
   timestamp: string;
   error?: string;
@@ -30,7 +30,7 @@ interface ChatInfoResponse {
   status: 'available' | 'unavailable';
   description: string;
   endpoints: Record<string, string>;
-  usage: Record<string, any>;
+  usage: Record<string, unknown>;
   timestamp: string;
   error?: string;
 }
@@ -45,19 +45,31 @@ export class LLMService {
    */
   static async chat(message: string, history: ChatMessage[] = []): Promise<ChatResponse> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/chat`, {
+      // Use the enhanced chat endpoint
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/chat/enhanced`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message, history } as ChatRequest)
+        body: JSON.stringify({ 
+          message, 
+          history,
+          generateIdeas: false // Keep it simple for now
+        } as ChatRequest)
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const enhancedResponse = await response.json();
+      
+      // Convert enhanced response to simple format
+      return {
+        success: enhancedResponse.success,
+        reply: enhancedResponse.reply,
+        error: enhancedResponse.error
+      };
     } catch (error) {
       console.error('Error sending chat message:', error);
       return {
@@ -72,20 +84,31 @@ export class LLMService {
    */
   static async getHealth(): Promise<HealthResponse> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/chat/health`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/chat/enhanced/health`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const enhancedHealth = await response.json();
+      
+      // Convert enhanced health response to simple format
+      return {
+        success: enhancedHealth.success,
+        status: enhancedHealth.status,
+        service: enhancedHealth.service,
+        openai_available: enhancedHealth.openai_available || false,
+        available_models: enhancedHealth.available_models || [],
+        timestamp: enhancedHealth.timestamp,
+        error: enhancedHealth.error
+      };
     } catch (error) {
       console.error('Error checking LLM health:', error);
       return {
         success: false,
         status: 'error',
         service: 'CourseBot',
-        ollama_available: false,
+        openai_available: false,
         available_models: [],
         timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Failed to check health'
@@ -93,19 +116,30 @@ export class LLMService {
     }
   }
 
-
   /**
    * Get chat API information and status
    */
   static async getInfo(): Promise<ChatInfoResponse> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/chat/info`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/chat/enhanced/info`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const enhancedInfo = await response.json();
+      
+      // Convert enhanced info response to simple format
+      return {
+        success: enhancedInfo.success,
+        service: enhancedInfo.service,
+        status: enhancedInfo.status,
+        description: enhancedInfo.description,
+        endpoints: enhancedInfo.endpoints || {},
+        usage: enhancedInfo.usage || {},
+        timestamp: enhancedInfo.timestamp,
+        error: enhancedInfo.error
+      };
     } catch (error) {
       console.error('Error fetching chat info:', error);
       return {
@@ -127,7 +161,7 @@ export class LLMService {
   static async isAvailable(): Promise<boolean> {
     try {
       const health = await this.getHealth();
-      return health.success && health.ollama_available;
+      return health.success && health.openai_available;
     } catch (error) {
       console.error('Error checking LLM availability:', error);
       return false;

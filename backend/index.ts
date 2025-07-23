@@ -11,6 +11,8 @@ import courseRouter from './src/route/course.route';
 import lessonRouter from './src/route/lesson.route';
 import courseGenerationRouter, { setupCourseGenerationWebSocket } from './src/route/course-generation.route';
 import chatRouter from './src/llm/routes/chat.route';
+import enhancedChatRouter from './src/llm/routes/enhanced-chat.route';
+import sessionRouter from './src/llm/routes/session.route';
 import { globalErrorHandler, notFound } from './src/middleware/error.middleware';
 import { requestLogger, performanceMonitor } from './src/middleware/logger.middleware';
 
@@ -188,6 +190,8 @@ app.use('/api/v1/courses', courseRouter);
 app.use('/api/v1/lessons', lessonRouter);
 app.use('/api/v1/course-generation', courseGenerationRouter);
 app.use('/api/v1/chat', chatRouter);
+app.use('/api/v1/chat/enhanced', enhancedChatRouter);
+app.use('/api/v1/chat/sessions', sessionRouter);
 
 // API v1 info endpoint
 app.get('/api/v1', (req: Request, res: Response) => {
@@ -218,6 +222,17 @@ app.get('/api/v1', (req: Request, res: Response) => {
       'POST /api/v1/chat - Chat with CourseBot for course idea brainstorming',
       'GET /api/v1/chat/health - Check CourseBot service health',
       'GET /api/v1/chat/models - Get available Ollama models',
+      'POST /api/v1/chat/enhanced - Enhanced chat with OpenAI for course brainstorming',
+      'POST /api/v1/chat/enhanced/generate-ideas - Generate structured course ideas',
+      'POST /api/v1/chat/enhanced/analyze - Analyze user input for intent',
+      'POST /api/v1/chat/enhanced/suggestions - Get conversation suggestions',
+      'GET /api/v1/chat/enhanced/health - Check enhanced chat service health',
+      'POST /api/v1/chat/sessions - Create or get conversation session',
+      'GET /api/v1/chat/sessions/:sessionId/history - Get session conversation history',
+      'GET /api/v1/chat/sessions/:sessionId/context - Get session context',
+      'PUT /api/v1/chat/sessions/:sessionId/context - Update session context',
+      'GET /api/v1/chat/sessions/user/:userId - Get user\'s active sessions',
+      'GET /api/v1/chat/sessions/:sessionId/stats - Get session statistics',
     ]
   });
 });

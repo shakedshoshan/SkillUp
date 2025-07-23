@@ -345,7 +345,7 @@ export class CourseService {
     }
   }
 
-  static async addCoursePart(courseId: string, partData: { title: string; description: string; learning_goals?: string[] }): Promise<{ success: boolean; data?: any; error?: string }> {
+  static async addCoursePart(courseId: string, partData: { title: string; description: string; learning_goals?: string[] }): Promise<{ success: boolean; data?: CoursePart; error?: string }> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts`, {
         method: 'POST',
@@ -366,7 +366,7 @@ export class CourseService {
     }
   }
 
-  static async updateCoursePart(courseId: string, partId: string, partData: { title?: string; description?: string; learning_goals?: string[] }): Promise<{ success: boolean; data?: any; error?: string }> {
+  static async updateCoursePart(courseId: string, partId: string, partData: { title?: string; description?: string; learning_goals?: string[] }): Promise<{ success: boolean; data?: CoursePart; error?: string }> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}`, {
         method: 'PUT',
@@ -428,7 +428,7 @@ export class CourseService {
         }[];
       }[];
     };
-  }): Promise<{ success: boolean; data?: any; error?: string }> {
+  }): Promise<{ success: boolean; data?: Lesson; error?: string }> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}/lessons`, {
         method: 'POST',
@@ -473,7 +473,7 @@ export class CourseService {
         }[];
       }[];
     };
-  }): Promise<{ success: boolean; data?: any; error?: string }> {
+  }): Promise<{ success: boolean; data?: Lesson; error?: string }> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/api/v1/courses/${courseId}/parts/${partId}/lessons/${lessonId}`, {
         method: 'PUT',
