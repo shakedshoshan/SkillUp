@@ -177,9 +177,10 @@ export function Chat({
   };
 
   // Optional: Refresh messages from storage (useful for syncing across tabs)
-  const refreshMessagesFromStorage = () => {
-    loadMessagesFromStorage();
-  };
+  // Uncomment if needed for cross-tab synchronization
+  // const refreshMessagesFromStorage = () => {
+  //   loadMessagesFromStorage();
+  // };
 
   const retryLastMessage = async () => {
     if (messages.length === 0) return;
@@ -271,11 +272,11 @@ export function Chat({
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Welcome to CourseBot!</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              I'm here to help you with course creation, learning strategies,<br />
+              I&apos;m here to help you with course creation, learning strategies,<br />
               and answer any questions about your educational journey.
             </p>
             <div className="mt-4 text-xs text-gray-500">
-              Try asking: "How do I create an effective course outline?"
+              Try asking: &quot;How do I create an effective course outline?&quot;
             </div>
           </div>
         ) : (

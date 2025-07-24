@@ -9,8 +9,6 @@ import {
   type Course, 
   type CoursePart, 
   type Lesson,
-  type QuizQuestion,
-  type QuizOption,
   CourseService 
 } from '@/lib/services/course.service'
 import { 
@@ -434,7 +432,7 @@ export default function CourseEditPage() {
     }))
   }
 
-  const updateQuizOption = (questionIndex: number, optionIndex: number, field: string, value: any) => {
+  const updateQuizOption = (questionIndex: number, optionIndex: number, field: string, value: string) => {
     setQuizForm(prev => ({
       questions: prev.questions.map((q, qIndex) => 
         qIndex === questionIndex ? {
@@ -916,7 +914,7 @@ export default function CourseEditPage() {
                               <div className="space-y-4">
                                 {/* Debug info */}
                                 <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-                                  Debug: {quizForm.questions.length} questions in state | Editing Quiz: {editingQuiz === lesson.id ? 'YES' : 'NO'}
+                                  Debug: {quizForm.questions.length} questions in state | Editing Quiz: {editingQuiz === lesson.id ? "YES" : "NO"}
                                 </div>
                                 {quizForm.questions.map((question, questionIndex) => (
                                   <div key={`question-${question.question_number}-${questionIndex}`} className="border rounded-lg p-4 bg-gray-50">
@@ -1008,7 +1006,7 @@ export default function CourseEditPage() {
                                 {quizForm.questions.length === 0 && (
                                   <div className="text-center py-8 text-gray-500">
                                     <HelpCircle className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                                    <p>No questions yet. Click "Add Question" to get started.</p>
+                                    <p>No questions yet. Click &quot;Add Question&quot; to get started.</p>
                                   </div>
                                 )}
                               </div>
