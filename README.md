@@ -10,8 +10,6 @@
 
 **An intelligent learning platform that generates personalized courses using AI, tracks progress, and connects learners with mentors.**
 
-[![Deploy on Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/skillup)
-[![Deploy with Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https://github.com/your-username/skillup-backend)
 
 </div>
 
