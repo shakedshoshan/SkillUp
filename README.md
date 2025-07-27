@@ -19,7 +19,7 @@ SkillUp is a comprehensive AI-powered learning platform that revolutionizes onli
 
 ### Key Features
 
-- 🤖 **AI Course Generation**: Automatically create comprehensive courses using OpenAI's GPT models with optional web search for current information
+- 🤖 **AI Course Generation**: Automatically create comprehensive courses using OpenAI's GPT and LangChain for AI workflows, models with optional web search for current information
 - 🎯 **Personalized Learning**: AI-powered course recommendations and adaptive learning paths
 - 💬 **Intelligent Chatbot**: CourseBot powered by Ollama/Gemma for course idea brainstorming
 - 📊 **Progress Tracking**: Detailed analytics and progress monitoring for learners
